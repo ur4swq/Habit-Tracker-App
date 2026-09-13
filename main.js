@@ -11,7 +11,7 @@ function createWindow() {
     minHeight: 650,
     autoHideMenuBar: true,
 
-    icon: path.join(__dirname, "assets", "icon.png"),
+    icon: path.join(__dirname, "assets", "icon.ico"),
 
     webPreferences: {
       contextIsolation: true,

@@ -25,7 +25,16 @@ const hook = `
     sanitizeSettings: sanitizeSettings, LANGUAGES: LANGUAGES,
     DAILY_QUOTES: DAILY_QUOTES, dailyQuoteIndex: dailyQuoteIndex, dailyQuote: dailyQuote,
     playAchievementSound: playAchievementSound,
-    getAchievementSoundPlayCount: function(){ return achievementSoundPlayCount; }
+    getAchievementSoundPlayCount: function(){ return achievementSoundPlayCount; },
+    isFutureDate: isFutureDate, isSameDay: isSameDay, moveHabit: moveHabit, commitRename: commitRename,
+    isEditableField: isEditableField, computeScrollCorrection: computeScrollCorrection,
+    computeKeyboardOverlap: computeKeyboardOverlap,
+    isStandaloneDisplay: isStandaloneDisplay, detectStandaloneDisplay: detectStandaloneDisplay,
+    canShowInstallPrompt: canShowInstallPrompt, promptInstall: promptInstall,
+    shouldSkipServiceWorkerRegistration: shouldSkipServiceWorkerRegistration,
+    registerServiceWorker: registerServiceWorker,
+    __setDeferredInstallPromptForTests: function(v){ deferredInstallPromptEvent = v; },
+    __getDeferredInstallPromptForTests: function(){ return deferredInstallPromptEvent; }
   };
 ` + marker;
 

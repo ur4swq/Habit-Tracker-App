@@ -4,6 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Consistency</title>
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="theme-color" content="#0E0E10" />
+<!-- iOS ignores the web app manifest for install/standalone behavior, so
+     these meta tags + apple-touch-icon are required in addition to it. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Habit Tracker" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="icon" href="assets/icon-192.png" />
 <style>
   :root[data-theme="dark"]{
     --bg:#0E0E10; --surface:#151517; --surface-2:#1B1B1E;
@@ -39,7 +48,8 @@
   .topbar{
     position:sticky; top:0; z-index:20;
     display:flex; align-items:center; justify-content:space-between;
-    padding:16px 20px; backdrop-filter:blur(10px);
+    padding:calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 16px calc(20px + env(safe-area-inset-left));
+    backdrop-filter:blur(10px);
     background:color-mix(in srgb, var(--bg) 82%, transparent);
     border-bottom:1px solid var(--border);
   }
@@ -54,7 +64,7 @@
   .theme-toggle{ font-size:12px; color:var(--text-dim); border:1px solid var(--border); border-radius:20px; padding:5px 12px; transition:border-color .15s ease,color .15s ease; }
   .theme-toggle:hover{ color:var(--text); border-color:var(--border-strong); }
 
-  .app{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:28px 20px calc(100px + env(safe-area-inset-bottom) + var(--kb-inset,0px)); transition:padding-bottom .18s ease; }
+  .app{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:28px calc(20px + env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom) + var(--kb-inset,0px)) calc(20px + env(safe-area-inset-left)); transition:padding-bottom .18s ease; }
 
   /* Day nav */
   .daynav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
@@ -159,6 +169,7 @@
   .cal-cell.blank{ border:none; }
   .cal-cell.clickable{ cursor:pointer; }
   .cal-cell.clickable:hover{ border-color:var(--border-strong); }
+  .cal-cell.future{ cursor:default; opacity:.4; }
   .cal-cell.today{ box-shadow:0 0 0 1.5px var(--text) inset; }
   .cal-cell.full::after{ content:""; position:absolute; top:3px; right:3px; width:4px; height:4px; border-radius:50%; background:var(--bg); }
 
@@ -246,7 +257,8 @@
       importComplete:"Import complete", fileFormatNotRecognized:"File format not recognized",
       couldntReadFile:"Couldn't read that file", exported:"Exported",
       backToToday:"Back to Today", somethingWrong:"Something went wrong.",
-      renderErrorMsg:"That screen hit an error. Your data is safe — try going back to today."
+      renderErrorMsg:"That screen hit an error. Your data is safe — try going back to today.",
+      installApp:"Install App", installAppHint:"Add Habit Tracker to your home screen for quick, full-screen access."
     },
     tr:{
       tabToday:"Bugün", tabHistory:"Geçmiş", tabSettings:"Ayarlar",
@@ -279,7 +291,8 @@
       importComplete:"İçe aktarma tamamlandı", fileFormatNotRecognized:"Dosya biçimi tanınmadı",
       couldntReadFile:"Dosya okunamadı", exported:"Dışa aktarıldı",
       backToToday:"Bugüne dön", somethingWrong:"Bir şeyler ters gitti.",
-      renderErrorMsg:"Bu ekranda bir hata oluştu. Verilerin güvende — bugüne dönmeyi dene."
+      renderErrorMsg:"Bu ekranda bir hata oluştu. Verilerin güvende — bugüne dönmeyi dene.",
+      installApp:"Uygulamayı Yükle", installAppHint:"Hızlı, tam ekran erişim için Habit Tracker'ı ana ekranına ekle."
     },
     es:{
       tabToday:"Hoy", tabHistory:"Historial", tabSettings:"Ajustes",
@@ -312,7 +325,8 @@
       importComplete:"Importación completa", fileFormatNotRecognized:"Formato de archivo no reconocido",
       couldntReadFile:"No se pudo leer el archivo", exported:"Exportado",
       backToToday:"Volver a hoy", somethingWrong:"Algo salió mal.",
-      renderErrorMsg:"Esta pantalla tuvo un error. Tus datos están a salvo — intenta volver a hoy."
+      renderErrorMsg:"Esta pantalla tuvo un error. Tus datos están a salvo — intenta volver a hoy.",
+      installApp:"Instalar App", installAppHint:"Añade Habit Tracker a tu pantalla de inicio para un acceso rápido a pantalla completa."
     },
     de:{
       tabToday:"Heute", tabHistory:"Verlauf", tabSettings:"Einstellungen",
@@ -345,7 +359,8 @@
       importComplete:"Import abgeschlossen", fileFormatNotRecognized:"Dateiformat nicht erkannt",
       couldntReadFile:"Datei konnte nicht gelesen werden", exported:"Exportiert",
       backToToday:"Zurück zu heute", somethingWrong:"Etwas ist schiefgelaufen.",
-      renderErrorMsg:"Auf diesem Bildschirm ist ein Fehler aufgetreten. Deine Daten sind sicher — versuch, zu heute zurückzukehren."
+      renderErrorMsg:"Auf diesem Bildschirm ist ein Fehler aufgetreten. Deine Daten sind sicher — versuch, zu heute zurückzukehren.",
+      installApp:"App installieren", installAppHint:"Füge Habit Tracker deinem Startbildschirm hinzu für schnellen Vollbildzugriff."
     },
     fr:{
       tabToday:"Aujourd'hui", tabHistory:"Historique", tabSettings:"Réglages",
@@ -378,7 +393,8 @@
       importComplete:"Importation terminée", fileFormatNotRecognized:"Format de fichier non reconnu",
       couldntReadFile:"Impossible de lire ce fichier", exported:"Exporté",
       backToToday:"Retour à aujourd'hui", somethingWrong:"Un problème est survenu.",
-      renderErrorMsg:"Cet écran a rencontré une erreur. Vos données sont en sécurité — essayez de revenir à aujourd'hui."
+      renderErrorMsg:"Cet écran a rencontré une erreur. Vos données sont en sécurité — essayez de revenir à aujourd'hui.",
+      installApp:"Installer l'app", installAppHint:"Ajoutez Habit Tracker à votre écran d'accueil pour un accès rapide en plein écran."
     }
   };
 
@@ -617,6 +633,15 @@
   function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
   function addDays(d, n){ var r=new Date(d); r.setDate(r.getDate()+n); return r; }
   function isSameDay(a,b){ return dateStr(a)===dateStr(b); }
+  /* Central future-date check, compared on LOCAL CALENDAR DATES only
+     (never raw timestamps), so DST/timezone quirks can't shift which
+     day counts as "today" at the boundary. Accepts either a "YYYY-MM-DD"
+     key or a Date. */
+  function isFutureDate(dateKeyOrDate){
+    var d = (typeof dateKeyOrDate === "string") ? parseDateStr(dateKeyOrDate) : dateKeyOrDate;
+    var today = startOfDay(new Date());
+    return startOfDay(d).getTime() > today.getTime();
+  }
   function formatDisplayDate(d, today){
     var lang = (state && state.settings && state.settings.language) || "en";
     var weekdayNames = WEEKDAY_NAMES_I18N[lang] || WEEKDAY_NAMES_I18N.en;
@@ -1072,6 +1097,7 @@
     var today = startOfDay(new Date());
     var ds = dateStr(state.selectedDate);
     var isToday = isSameDay(state.selectedDate, today);
+    var isFuture = isFutureDate(ds); // central guard — future days are view-only
 
     /* day nav */
     var nav = h("div",{class:"daynav"});
@@ -1088,7 +1114,13 @@
       dw.appendChild(h("div",{class:"date-sub", text:t("today")}));
     }
     nav.appendChild(dw);
-    nav.appendChild(h("button",{class:"arrow", "aria-label":"Next day", onclick:function(){
+    // Preferred UX: never allow navigating past today at all. The arrow is
+    // disabled once we're viewing today (visually obvious via the existing
+    // .arrow:disabled styling, subtle — matches history month-nav/manage
+    // row up-down arrows), and the handler itself refuses to advance past
+    // today even if clicked/activated programmatically.
+    nav.appendChild(h("button",{class:"arrow", "aria-label":"Next day", disabled: isToday, onclick:function(){
+      if(isSameDay(state.selectedDate, startOfDay(new Date()))) return;
       state.selectedDate = addDays(state.selectedDate,1); render();
     }}, [icon(ICONS.chevronRight,14)]));
     wrap.appendChild(nav);
@@ -1110,19 +1142,22 @@
     /* daily consistency quote — same all day, localized, deterministic */
     wrap.appendChild(h("div",{class:"daily-quote", id:"daily-quote", text: dailyQuote()}));
 
-    /* habits section header + manage toggle */
+    /* habits section header + manage toggle (hidden entirely on a future
+       day — nothing there can be edited, so no point showing it) */
     var labelRow = h("div",{class:"section-label-row"});
     labelRow.appendChild(h("div",{class:"section-label", text:t("habitsLabel")}));
-    labelRow.appendChild(h("button",{class:"text-link", text: state.habitsEditMode ? t("doneManaging") : t("manage"), onclick:function(){
-      state.habitsEditMode = !state.habitsEditMode;
-      state.editingHabitId = null;
-      state.deleteConfirmingId = null;
-      render();
-    }}));
+    if(!isFuture){
+      labelRow.appendChild(h("button",{class:"text-link", text: state.habitsEditMode ? t("doneManaging") : t("manage"), onclick:function(){
+        state.habitsEditMode = !state.habitsEditMode;
+        state.editingHabitId = null;
+        state.deleteConfirmingId = null;
+        render();
+      }}));
+    }
     wrap.appendChild(labelRow);
 
     var habitsWrap = h("div",{class:"habits"});
-    if(state.habitsEditMode){
+    if(state.habitsEditMode && !isFuture){
       renderManageRows(habitsWrap);
     } else {
       var habitsList = state.config.habits.filter(function(hb){return hb.enabled;});
@@ -1132,7 +1167,7 @@
         habitsList.forEach(function(hb){
           var day = getDay(ds);
           var done = !!(day && day.habits[hb.id]);
-          var row = h("button",{class:"habit-row"+(done?" done":""), "data-habit-id":hb.id, onclick:function(ev){
+          var row = h("button",{class:"habit-row"+(done?" done":""), "data-habit-id":hb.id, disabled: isFuture, onclick:function(ev){
             toggleHabit(ds, hb.id, ev.currentTarget);
           }});
           row.appendChild(h("div",{class:"check"},[icon(ICONS.check,12)]));
@@ -1143,8 +1178,11 @@
     }
     wrap.appendChild(habitsWrap);
 
-    /* quick add — always one tap away, right under the list */
-    if(state.mainAddOpen){
+    /* quick add — always one tap away, right under the list (not offered
+       on a future day: there's nothing there yet to add a habit "into") */
+    if(isFuture){
+      // nothing rendered — Add Habit is simply not available for future days
+    } else if(state.mainAddOpen){
       var addRow = h("div",{class:"add-habit-row"});
       var addInput = h("input",{placeholder:t("addHabitPlaceholder")});
       addRow.appendChild(addInput);
@@ -1163,15 +1201,16 @@
       }}));
     }
 
-    /* mood */
+    /* mood — disabled/non-interactive on a future day */
     wrap.appendChild(h("div",{class:"section-label", text:t("moodLabel"), style:"margin-top:34px;"}));
     var moodRow = h("div",{class:"mood-row"});
     var dayForMood = getDay(ds);
     MOODS.forEach(function(moodId){
       moodRow.appendChild(h("button",{
         class:"mood-btn"+(dayForMood && dayForMood.mood===moodId ? " selected":""),
-        text:t(MOOD_LABEL_KEYS[moodId]),
+        text:t(MOOD_LABEL_KEYS[moodId]), disabled: isFuture,
         onclick:function(){
+          if(isFutureDate(ds)) return; // defense-in-depth: never write future mood data
           var day = ensureDay(ds);
           day.mood = (day.mood===moodId) ? null : moodId;
           persist(); render();
@@ -1180,13 +1219,14 @@
     });
     wrap.appendChild(moodRow);
 
-    /* journal */
+    /* journal — read-only on a future day */
     wrap.appendChild(h("div",{class:"section-label", text:t("journalLabel")}));
     var jwrap = h("div",{class:"journal-wrap"});
-    var ta = h("textarea",{class:"journal", placeholder:t("journalPlaceholder")});
+    var ta = h("textarea",{class:"journal", placeholder:t("journalPlaceholder"), disabled: isFuture});
     ta.value = (getDay(ds) && getDay(ds).journal) || "";
     var jTimer=null;
     ta.addEventListener("input", function(){
+      if(isFutureDate(ds)) return; // defense-in-depth: never persist future journal text
       var val = ta.value;
       clearTimeout(jTimer);
       jTimer = setTimeout(function(){
@@ -1201,18 +1241,22 @@
     jwrap.appendChild(h("div",{class:"save-flag", id:"save-flag", text:t("saved")}));
     wrap.appendChild(jwrap);
 
-    /* footer */
+    /* footer — reset is a day-data mutation too, so it's hidden for a
+       future day (there's nothing there to reset, and it's view-only) */
     var footer = h("div",{class:"footer-row"});
     footer.appendChild(h("div",{class:"insight", id:"insight-text", text: computeInsight()}));
-    if(state.resetConfirming){
-      footer.appendChild(h("button",{class:"reset-confirm", text:t("confirmReset"), onclick:function(){
-        delete state.days[ds]; state.resetConfirming=false; persist(); render(); showToast(t("dayReset"));
-      }}));
-    } else {
-      footer.appendChild(h("button",{class:"reset-link", text:t("resetDay"), onclick:function(){
-        state.resetConfirming=true; render();
-        setTimeout(function(){ state.resetConfirming=false; }, 3000);
-      }}));
+    if(!isFuture){
+      if(state.resetConfirming){
+        footer.appendChild(h("button",{class:"reset-confirm", text:t("confirmReset"), onclick:function(){
+          if(isFutureDate(ds)) return;
+          delete state.days[ds]; state.resetConfirming=false; persist(); render(); showToast(t("dayReset"));
+        }}));
+      } else {
+        footer.appendChild(h("button",{class:"reset-link", text:t("resetDay"), onclick:function(){
+          state.resetConfirming=true; render();
+          setTimeout(function(){ state.resetConfirming=false; }, 3000);
+        }}));
+      }
     }
     wrap.appendChild(footer);
 
@@ -1220,16 +1264,17 @@
   }
 
   function renderManageRows(container){
+    var futureLocked = isFutureDate(state.selectedDate); // future days: view-only, no habit management
     state.config.habits.forEach(function(hb, idx){
       var row = h("div",{class:"manage-row"});
-      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move up", disabled: idx===0, onclick:function(){
+      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move up", disabled: futureLocked || idx===0, onclick:function(){
         moveHabit(idx,-1);
       }},[icon(ICONS.up,13)]));
-      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move down", disabled: idx===state.config.habits.length-1, onclick:function(){
+      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move down", disabled: futureLocked || idx===state.config.habits.length-1, onclick:function(){
         moveHabit(idx,1);
       }},[icon(ICONS.down,13)]));
 
-      if(state.editingHabitId===hb.id){
+      if(state.editingHabitId===hb.id && !futureLocked){
         var input = h("input",{class:"rename"});
         input.value = hb.name;
         input.addEventListener("keydown", function(ev){
@@ -1241,21 +1286,25 @@
         setTimeout(function(){ input.focus(); input.select(); }, 0);
       } else {
         row.appendChild(h("div",{class:"name"+(hb.enabled?"":" disabled"), text:hb.name, onclick:function(){
+          if(futureLocked) return;
           state.editingHabitId = hb.id; render();
         }}));
       }
 
       row.appendChild(h("div",{class:"switch"+(hb.enabled?" on":""), onclick:function(){
+        if(futureLocked) return;
         hb.enabled = !hb.enabled; persist(); render();
       }},[h("div",{class:"dot"})]));
 
-      if(state.deleteConfirmingId===hb.id){
+      if(state.deleteConfirmingId===hb.id && !futureLocked){
         row.appendChild(h("button",{class:"iconbtn", text:"✕", "aria-label":t("deleteConfirm"), onclick:function(){
+          if(futureLocked) return;
           state.config.habits = state.config.habits.filter(function(x){return x.id!==hb.id;});
           state.deleteConfirmingId=null; persist(); render(); showToast(t("habitDeleted"));
         }}));
       } else {
-        row.appendChild(h("button",{class:"iconbtn", "aria-label":"Delete", onclick:function(){
+        row.appendChild(h("button",{class:"iconbtn", "aria-label":"Delete", disabled: futureLocked, onclick:function(){
+          if(futureLocked) return;
           state.deleteConfirmingId = hb.id; render();
           setTimeout(function(){ if(state.deleteConfirmingId===hb.id){ state.deleteConfirmingId=null; render(); } }, 3000);
         }},[icon(ICONS.trash,13)]));
@@ -1265,6 +1314,7 @@
   }
 
   function commitAddHabit(value){
+    if(isFutureDate(state.selectedDate)) return; // future days are view-only
     var val = (value||"").trim();
     if(!val) return;
     var isDuplicate = state.config.habits.some(function(hb){ return hb.name.toLowerCase() === val.toLowerCase(); });
@@ -1288,6 +1338,10 @@
   }
 
   function toggleHabit(ds, habitId, rowEl){
+    // Central future-date protection: a future day's tracking data must
+    // never be modified, no matter how this function is reached.
+    if(isFutureDate(ds)) return;
+
     // Only ever compare against/trigger the 100% achievement sound for
     // the CURRENT day — browsing/editing past or future days must never
     // fire it. Compute the "before" percentage now, from the real data,
@@ -1408,12 +1462,17 @@
       var dds = dateStr(d);
       var hasData = !!state.days[dds];
       var pct = hasData ? computeCompletion(dds).pct : 0;
-      var cls = "cal-cell clickable";
+      var future = isFutureDate(dds);
+      var cls = "cal-cell" + (future ? " future" : " clickable");
       if(isSameDay(d, today)) cls += " today";
       if(hasData && pct===100) cls += " full";
-      var cell = h("button",{class:cls, text:String(day), onclick:(function(dCopy){ return function(){
-        state.selectedDate = dCopy; state.view="dashboard"; render();
-      };})(d)});
+      var cellAttrs = {class:cls, text:String(day), disabled: future};
+      if(!future){
+        cellAttrs.onclick = (function(dCopy){ return function(){
+          state.selectedDate = dCopy; state.view="dashboard"; render();
+        };})(d);
+      }
+      var cell = h("button", cellAttrs);
       var alpha = 0;
       if(hasData){
         if(pct>=100) alpha=0.92;
@@ -1520,10 +1579,25 @@
     dataActions.appendChild(fileInput);
     wrap.appendChild(dataActions);
 
+    /* PWA install — subtle, only ever shown when the browser has actually
+       handed us an install prompt to use, and never while already
+       running installed (standalone). No popups, no repeats: this is
+       just a normal settings-row button the person can ignore. */
+    if(canShowInstallPrompt(!!deferredInstallPromptEvent, detectStandaloneDisplay())){
+      var installRow = h("div",{class:"pref-row", style:"margin-top:40px; padding-top:18px; border-top:1px solid var(--border); border-bottom:none;"});
+      var installLabelWrap = h("div",{});
+      installLabelWrap.appendChild(h("div",{class:"pref-label", text:t("installApp")}));
+      installLabelWrap.appendChild(h("div",{class:"pref-hint", text:t("installAppHint")}));
+      installRow.appendChild(installLabelWrap);
+      installRow.appendChild(h("button",{class:"btn-outline", id:"install-app-btn", text:t("installApp"), onclick:promptInstall}));
+      wrap.appendChild(installRow);
+    }
+
     return wrap;
   }
 
   function moveHabit(idx, dir){
+    if(isFutureDate(state.selectedDate)) return; // future days are view-only
     var arr = state.config.habits;
     var newIdx = idx+dir;
     if(newIdx<0 || newIdx>=arr.length) return;
@@ -1531,6 +1605,7 @@
     persist(); render();
   }
   function commitRename(id, value){
+    if(isFutureDate(state.selectedDate)){ state.editingHabitId = null; render(); return; }
     var v = value.trim();
     if(v){
       var hb = state.config.habits.filter(function(x){return x.id===id;})[0];
@@ -1553,34 +1628,145 @@
     showToast(t("exported"));
   }
 
+  /* ---------------- PWA: standalone detection + install prompt ----------------
+     Everything here is best-effort and defensively guarded (typeof checks
+     before touching navigator/matchMedia/BeforeInstallPromptEvent) so it
+     can never throw — including under Node in tests, in Electron (which
+     has none of this), or in browsers that don't support installability
+     at all. The pure functions (isStandaloneDisplay, canShowInstallPrompt,
+     shouldSkipServiceWorkerRegistration) take plain values rather than
+     touching globals directly, specifically so they're unit-testable
+     without a real browser environment. */
+  var deferredInstallPromptEvent = null;
+
+  function isStandaloneDisplay(matchesStandaloneMediaQuery, iosNavigatorStandalone){
+    return !!matchesStandaloneMediaQuery || iosNavigatorStandalone === true;
+  }
+  function detectStandaloneDisplay(){
+    var mm = false;
+    try{ mm = !!(typeof window !== "undefined" && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches); }catch(e){}
+    var iosFlag = false;
+    try{ iosFlag = (typeof navigator !== "undefined" && navigator.standalone === true); }catch(e){}
+    return isStandaloneDisplay(mm, iosFlag);
+  }
+  // Only offer the install action when the browser actually handed us a
+  // deferred beforeinstallprompt event AND we're not already running
+  // installed — matches "hide when unsupported" + "hide in standalone mode".
+  function canShowInstallPrompt(hasDeferredPrompt, standalone){
+    return !!hasDeferredPrompt && !standalone;
+  }
+  function promptInstall(){
+    if(!deferredInstallPromptEvent) return;
+    var ev = deferredInstallPromptEvent;
+    // Consume it immediately: a beforeinstallprompt event can only be
+    // used once, and clearing it up front means our own button can't be
+    // clicked twice in a row (no repeated/duplicate prompt calls).
+    deferredInstallPromptEvent = null;
+    try{ ev.prompt(); }catch(e){ /* best-effort only */ }
+    render();
+  }
+
+  try{
+    if(typeof window !== "undefined"){
+      window.addEventListener("beforeinstallprompt", function(ev){
+        try{
+          ev.preventDefault(); // defer the browser's automatic mini-infobar
+          deferredInstallPromptEvent = ev;
+          render(); // let a Settings-screen Install button appear if relevant
+        }catch(e){ /* best-effort only */ }
+      });
+      window.addEventListener("appinstalled", function(){
+        deferredInstallPromptEvent = null;
+        render();
+      });
+    }
+  }catch(e){ /* best-effort only */ }
+
+  /* ---------------- PWA: service worker registration ---------------- */
+  // Pure: decides whether registration should be skipped at all, given
+  // explicit support/protocol inputs — independent of any real
+  // navigator/location, so it's directly unit-testable.
+  function shouldSkipServiceWorkerRegistration(hasServiceWorkerSupport, protocol){
+    if(!hasServiceWorkerSupport) return true;
+    if(protocol === "file:") return true; // Electron loads index.html via file:// — no SW there
+    return false;
+  }
+  function registerServiceWorker(){
+    try{
+      var supported = !!(typeof navigator !== "undefined" && "serviceWorker" in navigator);
+      var protocol = (typeof location !== "undefined" && location.protocol) ? location.protocol : "";
+      if(shouldSkipServiceWorkerRegistration(supported, protocol)) return;
+      window.addEventListener("load", function(){
+        navigator.serviceWorker.register("./sw.js").catch(function(){ /* best-effort only */ });
+      });
+    }catch(e){ /* best-effort only — must never break the app */ }
+  }
+  registerServiceWorker();
+
   /* ---------------- mobile keyboard avoidance ----------------
-     On mobile Chrome/Safari, focusing an input/textarea can leave the
-     on-screen keyboard covering the field. We use window.visualViewport
-     (when available) to detect the keyboard opening — its reported
-     height shrinks relative to window.innerHeight — and:
-       1) grow a CSS variable (--kb-inset) that adds extra bottom
-          padding to .app, so there's room to scroll the field above
-          the keyboard instead of it being clipped under a fixed layout;
-       2) nudge the focused field into view within that extra space.
-     Falls back to a plain scrollIntoView on focus for browsers without
-     visualViewport. Everything here is best-effort and wrapped so it
-     can never throw or break the rest of the app (e.g. under Node in
-     tests, or on desktop where none of this is needed). Restores the
-     normal layout (--kb-inset back to 0) when the field loses focus. */
+     v1.1.1: the v1.1.0 fix wasn't reliable on real Android devices
+     (reported inside Instagram's in-app browser, and general Android
+     Chrome) — a single scrollIntoView-style measurement right after
+     focus isn't enough because these WebViews animate the keyboard in
+     over a few hundred ms and fire visualViewport events at inconsistent
+     times relative to that animation.
+
+     The pure calculation functions below (isEditableField,
+     computeScrollCorrection, computeKeyboardOverlap) take plain values
+     rather than touching the DOM directly, specifically so they can be
+     unit-tested without a real browser/visualViewport. The DOM wiring
+     around them re-runs the correction repeatedly (on focus, on every
+     visualViewport resize/scroll, and again at ~50ms and ~300ms after
+     focus) instead of trusting one measurement. */
+
+  /* input/textarea/contenteditable — the fields this whole feature exists for */
+  function isEditableField(el){
+    if(!el || !el.tagName) return false;
+    var tag = el.tagName.toLowerCase();
+    if(tag === "textarea") return true;
+    if(tag === "input"){
+      var type = (el.type || "text").toLowerCase();
+      return ["text","search","email","number","tel","url","password"].indexOf(type) !== -1;
+    }
+    if(el.isContentEditable) return true;
+    return false;
+  }
+
+  /* Pure: given a field's boundingClientRect-shaped {top,bottom} and the
+     actual visible viewport (top offset + height, from visualViewport
+     when available), return the exact px delta to scroll by so the field
+     sits comfortably inside it — 0 if it already does. Positive = scroll
+     down (field is below the visible area, e.g. under the keyboard),
+     negative = scroll up (field is above it, e.g. under a fixed topbar). */
+  function computeScrollCorrection(rect, visibleTop, visibleHeight, margin){
+    margin = (margin === undefined) ? 20 : margin; // within the requested 16–24px comfort margin
+    var visibleBottom = visibleTop + visibleHeight - margin;
+    if(rect.bottom > visibleBottom) return rect.bottom - visibleBottom;
+    if(rect.top < visibleTop + margin) return rect.top - (visibleTop + margin);
+    return 0;
+  }
+
+  /* Pure: how much of the layout viewport the keyboard (or any visual/
+     layout viewport mismatch) is currently eating, i.e. how much extra
+     bottom scroll room we need to manufacture so a field near the end of
+     the document can physically be scrolled above it. A small (<=40px)
+     mismatch is treated as noise (URL bar show/hide, rounding) rather
+     than a real keyboard, so desktop and "keyboard just closed" both
+     resolve to 0. */
+  function computeKeyboardOverlap(layoutHeight, visualHeight, visualOffsetTop){
+    var overlap = layoutHeight - (visualHeight + (visualOffsetTop || 0));
+    return overlap > 40 ? overlap : 0;
+  }
+
   (function setupKeyboardAvoidance(){
     if(typeof window === "undefined" || typeof document === "undefined") return;
     var vv = window.visualViewport;
     var activeEl = null;
+    var pendingTimers = [];
 
-    function isTextField(el){
-      if(!el || !el.tagName) return false;
-      var tag = el.tagName.toLowerCase();
-      if(tag === "textarea") return true;
-      if(tag === "input"){
-        var type = (el.type || "text").toLowerCase();
-        return ["text","search","email","number","tel","url","password"].indexOf(type) !== -1;
-      }
-      return false;
+    function clearPendingTimers(){
+      pendingTimers.forEach(function(id){ clearTimeout(id); });
+      pendingTimers = [];
     }
 
     function applyKeyboardInset(px){
@@ -1591,16 +1777,23 @@
       }catch(e){ /* best-effort only — never break the app over this */ }
     }
 
-    function scrollFieldIntoView(el){
+    // Manufacture enough temporary bottom scroll room for the keyboard's
+    // full height (requirement 7) — without this, a short page has
+    // nowhere left to scroll to even if we compute the "right" delta.
+    function ensureScrollRoomForKeyboard(){
+      if(!vv){ applyKeyboardInset(0); return; }
+      try{
+        applyKeyboardInset(computeKeyboardOverlap(window.innerHeight, vv.height, vv.offsetTop));
+      }catch(e){ /* best-effort only */ }
+    }
+
+    function correctFieldVisibility(el){
       if(!el || typeof el.getBoundingClientRect !== "function") return;
       try{
-        var viewportHeight = (vv && vv.height) || window.innerHeight;
+        var visibleTop = vv ? (vv.offsetTop || 0) : 0;
+        var visibleHeight = vv ? vv.height : window.innerHeight;
         var rect = el.getBoundingClientRect();
-        var margin = 16;
-        var visibleBottom = viewportHeight - margin;
-        var delta = 0;
-        if(rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
-        else if(rect.top < margin) delta = rect.top - margin;
+        var delta = computeScrollCorrection(rect, visibleTop, visibleHeight, 20);
         if(delta !== 0){
           var scroller = document.scrollingElement || document.documentElement;
           if(scroller && typeof scroller.scrollTop === "number"){
@@ -1612,43 +1805,46 @@
       }catch(e){ /* best-effort only */ }
     }
 
-    function onViewportResize(){
-      if(!vv) return;
-      try{
-        var layoutHeight = window.innerHeight;
-        var visualHeight = vv.height + (vv.offsetTop || 0);
-        var diff = layoutHeight - visualHeight;
-        if(diff > 60){ // heuristic: a real virtual keyboard, not just a rounding blip
-          applyKeyboardInset(diff);
-          if(activeEl) scrollFieldIntoView(activeEl);
-        } else {
-          applyKeyboardInset(0);
-        }
-      }catch(e){ /* best-effort only */ }
+    // Re-run the whole correction more than once: Android/WebView
+    // keyboards (Chrome, and WebViews like Instagram's in-app browser)
+    // animate in over time, so a single check right at focus is
+    // unreliable. We check immediately, then again at ~50ms and ~300ms —
+    // comfortably covering typical keyboard-open animation durations —
+    // in addition to reacting to every real visualViewport event.
+    function runCorrectionSequence(el){
+      clearPendingTimers();
+      ensureScrollRoomForKeyboard();
+      correctFieldVisibility(el);
+      pendingTimers.push(setTimeout(function(){ ensureScrollRoomForKeyboard(); correctFieldVisibility(el); }, 50));
+      pendingTimers.push(setTimeout(function(){ ensureScrollRoomForKeyboard(); correctFieldVisibility(el); }, 300));
     }
 
     function onFocusIn(ev){
       var el = ev && ev.target;
-      if(!isTextField(el)) return;
+      if(!isEditableField(el)) return;
       activeEl = el;
-      // Give the keyboard/viewport a moment to finish animating in
-      // before measuring — visualViewport's resize fires fastest,
-      // the plain fallback needs a longer, more conservative delay.
-      setTimeout(function(){ scrollFieldIntoView(el); }, vv ? 60 : 300);
+      runCorrectionSequence(el);
     }
     function onFocusOut(ev){
       if(activeEl && ev && ev.target === activeEl){
         activeEl = null;
+        clearPendingTimers();
+        // Reset immediately: no lingering blank space, and since we never
+        // scroll on blur, no unexpected jump to the top of the page either.
         applyKeyboardInset(0);
       }
+    }
+    function onViewportChange(){
+      if(activeEl) runCorrectionSequence(activeEl);
+      else ensureScrollRoomForKeyboard();
     }
 
     try{
       document.addEventListener("focusin", onFocusIn, true);
       document.addEventListener("focusout", onFocusOut, true);
       if(vv && typeof vv.addEventListener === "function"){
-        vv.addEventListener("resize", onViewportResize);
-        vv.addEventListener("scroll", onViewportResize);
+        vv.addEventListener("resize", onViewportChange);
+        vv.addEventListener("scroll", onViewportChange);
       }
     }catch(e){ /* best-effort only */ }
   })();

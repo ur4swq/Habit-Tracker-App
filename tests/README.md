@@ -14,4 +14,11 @@ completion math, streak edge cases (0–12/12, missing days, future
 dates), calendar month-length/leap-year handling, mood id migration,
 import validation, export shape, i18n string resolution across all
 5 languages, the Settings draft/Save flow, sound-effects persistence,
-and main-screen habit add/manage/delete via real DOM interaction.
+main-screen habit add/manage/delete via real DOM interaction, the
+daily consistency quote (localization + local-calendar determinism),
+the brand logo/fallback, the 100%-completion achievement sound
+(transition-only, sound-preference-aware, day-scoped), future-date
+protection (isFutureDate, navigation lockout, and every mutating
+action refusing to touch a future day), and the mobile
+keyboard-avoidance math (isEditableField / computeScrollCorrection /
+computeKeyboardOverlap) as pure, browser-independent functions.
