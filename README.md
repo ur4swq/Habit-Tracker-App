@@ -36,7 +36,15 @@ a static host, a future desktop/mobile shell) it runs on
   export/import. Changes are staged and applied with an explicit
   Save button.
 - Minimal, generated (no external audio assets) UI sound effects for
-  a small number of key actions, toggleable in Settings.
+  a small number of key actions, toggleable in Settings — including a
+  distinct achievement chime the first time a day's habits reach 100%.
+- A small daily consistency quote on the main screen, localized to
+  all 5 languages, deterministic on the local calendar date (same
+  quote all day, a new one the next day).
+- In-app brand mark next to "Consistency" in the top bar, with a
+  graceful text fallback if the image can't load.
+- Mobile-friendly keyboard handling: focused inputs/textareas (journal,
+  add/rename habit) stay visible above the on-screen keyboard.
 
 ## Project structure
 

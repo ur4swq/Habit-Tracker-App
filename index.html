@@ -17,6 +17,7 @@
     --text:#181818; --text-dim:#77767A; --text-faint:#AFAEAA;
     --ink:0,0,0; --shadow: 0 1px 0 rgba(0,0,0,0.02);
   }
+  :root{ --kb-inset:0px; }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -43,6 +44,9 @@
     border-bottom:1px solid var(--border);
   }
   .brand{ font-size:14px; font-weight:600; letter-spacing:.01em; }
+  .brand-wrap{ display:flex; align-items:center; gap:8px; }
+  .brand-logo{ width:26px; height:26px; object-fit:contain; display:block; flex:none; }
+  .brand-mark-fallback{ width:26px; height:26px; border-radius:7px; background:var(--surface-2); border:1px solid var(--border-strong); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--text); flex:none; }
   .tabs{ display:flex; gap:18px; }
   .tab{ font-size:13px; color:var(--text-dim); padding:4px 0; border-bottom:1px solid transparent; transition:color .15s ease, border-color .15s ease; }
   .tab:hover{ color:var(--text); }
@@ -50,7 +54,7 @@
   .theme-toggle{ font-size:12px; color:var(--text-dim); border:1px solid var(--border); border-radius:20px; padding:5px 12px; transition:border-color .15s ease,color .15s ease; }
   .theme-toggle:hover{ color:var(--text); border-color:var(--border-strong); }
 
-  .app{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:28px 20px 100px; }
+  .app{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:28px 20px calc(100px + env(safe-area-inset-bottom) + var(--kb-inset,0px)); transition:padding-bottom .18s ease; }
 
   /* Day nav */
   .daynav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
@@ -67,6 +71,8 @@
   /* Greeting + progress */
   .greeting{ font-size:26px; font-weight:600; letter-spacing:-0.01em; margin:0 0 4px; }
   .viewing-pill{ display:inline-block; font-size:11px; color:var(--text-dim); background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-bottom:6px; }
+
+  .daily-quote{ margin:-2px 0 28px; padding-left:12px; border-left:2px solid var(--border-strong); font-size:12.5px; line-height:1.55; color:var(--text-dim); font-style:italic; }
 
   .progress-row{ display:flex; align-items:center; gap:22px; margin:20px 0 26px; }
   .ring-wrap{ position:relative; width:88px; height:88px; flex:none; }
@@ -400,6 +406,178 @@
   var MOOD_LABEL_KEYS = { unhappy:"moodUnhappy", normal:"moodNormal", happy:"moodHappy", extra_happy:"moodExtraHappy" };
   var VALID_LANGS = LANGUAGES.map(function(l){ return l.code; });
 
+  /* ==================================================================
+     Daily consistency quotes — short proverb-like lines about habits,
+     discipline, patience and showing up. One list per language, all
+     the SAME length, so switching language keeps the same daily
+     "concept" (index) while showing it in the new language. No
+     external API/network — everything lives in this array. Original
+     lines plus a few traditional, public-domain-style proverbs; no
+     celebrity attributions.
+     ================================================================== */
+  var DAILY_QUOTES = {
+    en:[
+      "Small actions, repeated, become results.",
+      "Discipline is choosing what you want most over what you want now.",
+      "The days you don't feel like it are the ones that count most.",
+      "Progress is quiet before it is visible.",
+      "Show up today. Tomorrow will thank you.",
+      "A habit is a vote for the person you're becoming.",
+      "Consistency turns effort into identity.",
+      "One honest day builds on the last.",
+      "Small steps, kept daily, outrun big leaps taken rarely.",
+      "The streak isn't the goal — the person it shapes is.",
+      "Do it again tomorrow. That's the whole secret.",
+      "Patience is discipline stretched over time.",
+      "You don't need motivation, you need a next step.",
+      "What you repeat, you become.",
+      "Slow and steady still gets there.",
+      "Every small rep counts twice on the days you doubt it.",
+      "Skipping once is easy to forgive. Skipping twice starts a pattern.",
+      "Momentum is built one ordinary day at a time.",
+      "Today's effort is tomorrow's ease.",
+      "Show up especially when it feels pointless.",
+      "The work is boring. The results are not.",
+      "Habits are the compound interest of self-improvement.",
+      "Doing something small today beats doing nothing perfectly.",
+      "Discipline feels heavy only before it becomes normal.",
+      "You're one decision away from a better streak.",
+      "Small wins, stacked daily, become a different life.",
+      "The path is made by walking it every day.",
+      "Trust the process, not the mood of the day.",
+      "Every day you show up is a brick in the wall.",
+      "Consistency is the quiet cousin of greatness."
+    ],
+    tr:[
+      "Damlaya damlaya göl olur.",
+      "Sabreden derviş muradına ermiş.",
+      "Küçük adımlar birikince büyük yol alınır.",
+      "Bugün attığın adım, yarının temelidir.",
+      "Disiplin, hoşlanmadığın günlerde bile devam etmektir.",
+      "Bir alışkanlık, olmak istediğin kişiye verdiğin oydur.",
+      "İstikrar, çabayı kimliğe dönüştürür.",
+      "Yarım kalan iş bitmiş sayılmaz; devam et.",
+      "Her gün biraz, uzun vadede çok demektir.",
+      "Seri bozulmaz, sadece bırakılırsa biter.",
+      "Yavaş ama azimli olan, hızlı ama düzensiz olanı geçer.",
+      "Bugün yapmadığın, yarın iki kat ağırlaşır.",
+      "Motivasyon gelip geçer, alışkanlık kalır.",
+      "Ne tekrar edersen, o olursun.",
+      "Küçük bir adım, hiç adım atmamaktan iyidir.",
+      "Zorlandığın gün, en çok ilerlediğin gündür.",
+      "Taşı delen suyun gücü değil, sürekliliğidir.",
+      "Bugünün emeği, yarının kolaylığıdır.",
+      "Bir günü atlamak kolaydır ama ikincisi alışkanlık olur.",
+      "İvme, sıradan günlerin üst üste eklenmesiyle oluşur.",
+      "Sıkıcı olan çalışmadır, sonuçları değil.",
+      "Alışkanlıklar, kendini geliştirmenin bileşik faizidir.",
+      "Küçük ama tutarlı olan, büyük ama kararsız olandan güçlüdür.",
+      "Disiplin ağır gelir, ta ki alışılana kadar.",
+      "Her gün bir tuğla koyarsan, sonunda bir duvarın olur.",
+      "Yol, her gün yürüyerek yapılır.",
+      "Sürece güven, günün hevesine değil.",
+      "Bugün başladığın küçük şey, yarın büyük bir farka dönüşebilir.",
+      "En iyi zaman şimdi; ikinci en iyisi yarın değil, bugündür.",
+      "İstikrar, sessiz sedasız büyüklüğün kuzenidir."
+    ],
+    es:[
+      "Poco a poco se llega lejos.",
+      "Grano a grano se llena el granero.",
+      "El que persevera, alcanza.",
+      "No se ganó Zamora en una hora.",
+      "Quien la sigue, la consigue.",
+      "Pequeñas acciones, repetidas, se convierten en resultados.",
+      "La disciplina es elegir lo que quieres de verdad sobre lo que quieres ahora.",
+      "Los días en que no tienes ganas son los que más cuentan.",
+      "El progreso es silencioso antes de ser visible.",
+      "Preséntate hoy. El mañana te lo agradecerá.",
+      "Un hábito es un voto por la persona que quieres ser.",
+      "La constancia convierte el esfuerzo en identidad.",
+      "Una racha no se rompe, se abandona.",
+      "Lo que repites, en eso te conviertes.",
+      "Un paso pequeño es mejor que ningún paso.",
+      "El día más difícil suele ser el que más te hace avanzar.",
+      "No es la fuerza del agua, es su constancia la que desgasta la piedra.",
+      "El esfuerzo de hoy es la facilidad de mañana.",
+      "Saltarte un día es fácil de perdonar; saltarte dos ya es un patrón.",
+      "El impulso se construye un día ordinario a la vez.",
+      "El trabajo es aburrido, los resultados no lo son.",
+      "Los hábitos son el interés compuesto de la mejora personal.",
+      "Pequeño pero constante vence a grande pero irregular.",
+      "La disciplina pesa solo hasta que se vuelve costumbre.",
+      "Cada día que apareces es un ladrillo más en el muro.",
+      "El camino se hace caminándolo cada día.",
+      "Confía en el proceso, no en el ánimo del día.",
+      "Lo pequeño que empiezas hoy puede ser la gran diferencia de mañana.",
+      "El mejor momento es ahora; el segundo mejor no es mañana, es hoy.",
+      "La constancia es la prima silenciosa de la grandeza."
+    ],
+    de:[
+      "Steter Tropfen höhlt den Stein.",
+      "Übung macht den Meister.",
+      "Aller Anfang ist schwer.",
+      "Gut Ding will Weile haben.",
+      "Wer den Weg jeden Tag geht, kommt an.",
+      "Kleine Schritte, wiederholt, werden zu Ergebnissen.",
+      "Disziplin ist, das zu wählen, was du wirklich willst, statt das, was du jetzt willst.",
+      "Die Tage, an denen du keine Lust hast, zählen am meisten.",
+      "Fortschritt ist leise, bevor er sichtbar wird.",
+      "Erscheine heute. Das Morgen wird es dir danken.",
+      "Eine Gewohnheit ist eine Stimme für die Person, die du werden willst.",
+      "Beständigkeit macht aus Anstrengung eine Identität.",
+      "Eine Serie bricht nicht ab, sie wird aufgegeben.",
+      "Was du wiederholst, das wirst du.",
+      "Ein kleiner Schritt ist besser als gar keiner.",
+      "Der schwerste Tag ist oft der, der dich am meisten voranbringt.",
+      "Nicht die Kraft des Wassers, sondern seine Beständigkeit formt den Stein.",
+      "Die Mühe von heute ist die Leichtigkeit von morgen.",
+      "Einen Tag auszulassen ist leicht verziehen; beim zweiten wird es zur Gewohnheit.",
+      "Schwung entsteht Tag für Tag, ganz gewöhnlich.",
+      "Die Arbeit ist eintönig, die Ergebnisse sind es nicht.",
+      "Gewohnheiten sind der Zinseszins der Selbstverbesserung.",
+      "Klein, aber beständig schlägt groß, aber unregelmäßig.",
+      "Disziplin fühlt sich schwer an, bis sie normal wird.",
+      "Jeder Tag, an dem du erscheinst, ist ein Stein in der Mauer.",
+      "Der Weg entsteht dadurch, dass man ihn jeden Tag geht.",
+      "Vertraue dem Prozess, nicht der Stimmung des Tages.",
+      "Was du heute klein beginnst, kann morgen viel bewirken.",
+      "Der beste Zeitpunkt ist jetzt; der zweitbeste ist nicht morgen, sondern heute.",
+      "Beständigkeit ist die stille Schwester der Größe."
+    ],
+    fr:[
+      "Petit à petit, l'oiseau fait son nid.",
+      "C'est en forgeant qu'on devient forgeron.",
+      "Rome ne s'est pas construite en un jour.",
+      "Qui persévère, réussit.",
+      "Chaque jour où tu avances est un pas de plus sur le chemin.",
+      "De petites actions, répétées, deviennent des résultats.",
+      "La discipline, c'est choisir ce que tu veux vraiment plutôt que ce que tu veux maintenant.",
+      "Les jours où tu n'en as pas envie sont ceux qui comptent le plus.",
+      "Le progrès est silencieux avant d'être visible.",
+      "Présente-toi aujourd'hui. Demain t'en remerciera.",
+      "Une habitude est un vote pour la personne que tu deviens.",
+      "La constance transforme l'effort en identité.",
+      "Une série ne se casse pas, elle s'abandonne.",
+      "Ce que tu répètes, tu le deviens.",
+      "Un petit pas vaut mieux qu'aucun pas.",
+      "Le jour le plus difficile est souvent celui qui te fait le plus avancer.",
+      "Ce n'est pas la force de l'eau, mais sa constance, qui use la pierre.",
+      "L'effort d'aujourd'hui est la facilité de demain.",
+      "Manquer un jour se pardonne facilement ; en manquer deux devient une habitude.",
+      "L'élan se construit un jour ordinaire à la fois.",
+      "Le travail est monotone, les résultats ne le sont pas.",
+      "Les habitudes sont les intérêts composés du progrès personnel.",
+      "Petit mais constant l'emporte sur grand mais irrégulier.",
+      "La discipline semble lourde, jusqu'à ce qu'elle devienne normale.",
+      "Chaque jour où tu te présentes est une pierre posée sur le mur.",
+      "Le chemin se fait en marchant, chaque jour.",
+      "Fais confiance au processus, pas à l'humeur du jour.",
+      "Ce que tu commences petit aujourd'hui peut tout changer demain.",
+      "Le meilleur moment, c'est maintenant ; le deuxième meilleur n'est pas demain, c'est aujourd'hui.",
+      "La constance est la cousine discrète de la grandeur."
+    ]
+  };
+
   function t(key, vars){
     var lang = (state && state.settings && state.settings.language) || "en";
     var dict = STRINGS[lang] || STRINGS.en;
@@ -446,6 +624,27 @@
     var s = weekdayNames[d.getDay()]+", "+monthNames[d.getMonth()]+" "+d.getDate();
     if(d.getFullYear()!==today.getFullYear()) s += ", "+d.getFullYear();
     return s;
+  }
+
+  /* ---------------- daily quote (deterministic on local calendar date) ----------------
+     Uses the LOCAL y/m/d already extracted from the Date object (not
+     d.getTime()), then re-anchors those local components at UTC
+     midnight to get a stable "days since epoch" integer. That keeps
+     the index tied purely to the calendar date — identical across
+     reloads within the same day and across timezone/DST quirks — and
+     it advances by exactly 1 on the next local calendar day. */
+  function dailyQuoteIndex(d, listLength){
+    var y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+    var dayNumber = Math.floor(Date.UTC(y, m-1, day) / 86400000);
+    var n = listLength || 30;
+    return ((dayNumber % n) + n) % n;
+  }
+  function dailyQuote(){
+    var lang = (state && state.settings && state.settings.language) || "en";
+    var list = DAILY_QUOTES[lang] || DAILY_QUOTES.en;
+    if(!list || !list.length) return "";
+    var idx = dailyQuoteIndex(startOfDay(new Date()), list.length);
+    return list[idx] || list[0];
   }
 
   /* ---------------- state ---------------- */
@@ -495,6 +694,22 @@
   function playCheckSound(){ tone(880, 0.08); }
   function playAddSound(){ tone(640, 0.06, 0); tone(980, 0.08, 0.05); }
   function playSaveSound(){ tone(700, 0.07, 0); tone(1050, 0.1, 0.08); }
+
+  /* Distinct "achievement / unlock" chime for reaching 100% completion
+     on the current day — a short ascending three-note arpeggio, clearly
+     different from the single-blip check sound and the two-blip add/save
+     sounds, but kept at a similarly subtle volume. Gated on the Sound
+     Effects preference here too (in addition to tone()'s own check) so
+     the play-count below only reflects sounds that actually would play,
+     which regression tests use to verify the setting is respected. */
+  var achievementSoundPlayCount = 0;
+  function playAchievementSound(){
+    if(!state.settings.soundEffects) return;
+    achievementSoundPlayCount++;
+    tone(523.25, 0.10, 0,    0.05);
+    tone(659.25, 0.10, 0.09, 0.05);
+    tone(783.99, 0.16, 0.18, 0.055);
+  }
 
   /* ---------------- storage abstraction ----------------
      The app must never depend exclusively on Claude's artifact storage:
@@ -818,7 +1033,20 @@
 
   function renderTopbar(){
     var top = h("div",{class:"topbar"});
-    top.appendChild(h("div",{class:"brand", text:"Consistency"}));
+    var brandWrap = h("div",{class:"brand-wrap"});
+    // Fallback mark is always in the DOM (hidden) so a broken/blocked
+    // image swaps to it instantly with no layout jump and no need to
+    // insert/remove nodes from a parent.
+    var fallbackMark = h("div",{class:"brand-mark-fallback", text:"H"});
+    fallbackMark.style.display = "none";
+    var logoImg = h("img",{
+      class:"brand-logo", src:"assets/icon.png", alt:"", "aria-hidden":"true", draggable:"false",
+      onerror:function(){ logoImg.style.display="none"; fallbackMark.style.display="flex"; }
+    });
+    brandWrap.appendChild(logoImg);
+    brandWrap.appendChild(fallbackMark);
+    brandWrap.appendChild(h("div",{class:"brand", text:"Consistency"}));
+    top.appendChild(brandWrap);
     var tabs = h("div",{class:"tabs"});
     [["dashboard",t("tabToday")],["history",t("tabHistory")],["settings",t("tabSettings")]].forEach(function(pair){
       tabs.appendChild(h("button",{
@@ -878,6 +1106,9 @@
     meta.appendChild(h("div",{class:"status", id:"progress-status", text: statusMessage(comp.total? comp.pct : 0)}));
     progressRow.appendChild(meta);
     wrap.appendChild(progressRow);
+
+    /* daily consistency quote — same all day, localized, deterministic */
+    wrap.appendChild(h("div",{class:"daily-quote", id:"daily-quote", text: dailyQuote()}));
 
     /* habits section header + manage toggle */
     var labelRow = h("div",{class:"section-label-row"});
@@ -1057,6 +1288,15 @@
   }
 
   function toggleHabit(ds, habitId, rowEl){
+    // Only ever compare against/trigger the 100% achievement sound for
+    // the CURRENT day — browsing/editing past or future days must never
+    // fire it. Compute the "before" percentage now, from the real data,
+    // rather than a stored flag: this way the sound only ever fires as a
+    // direct result of *this* toggle, never from a page load or a
+    // rerender that didn't go through this function.
+    var isTodayDs = (ds === dateStr(startOfDay(new Date())));
+    var prevPct = isTodayDs ? computeCompletion(ds).pct : null;
+
     var day = ensureDay(ds);
     var willBeDone = !day.habits[habitId];
     day.habits[habitId] = willBeDone;
@@ -1079,6 +1319,9 @@
     }
 
     var comp = computeCompletion(ds);
+    if(isTodayDs && prevPct !== null && prevPct < 100 && comp.pct === 100){
+      playAchievementSound();
+    }
     var fg = document.getElementById("ring-fg");
     if(fg){
       var c = parseFloat(fg.getAttribute("data-circumference"));
@@ -1310,7 +1553,106 @@
     showToast(t("exported"));
   }
 
-  
+  /* ---------------- mobile keyboard avoidance ----------------
+     On mobile Chrome/Safari, focusing an input/textarea can leave the
+     on-screen keyboard covering the field. We use window.visualViewport
+     (when available) to detect the keyboard opening — its reported
+     height shrinks relative to window.innerHeight — and:
+       1) grow a CSS variable (--kb-inset) that adds extra bottom
+          padding to .app, so there's room to scroll the field above
+          the keyboard instead of it being clipped under a fixed layout;
+       2) nudge the focused field into view within that extra space.
+     Falls back to a plain scrollIntoView on focus for browsers without
+     visualViewport. Everything here is best-effort and wrapped so it
+     can never throw or break the rest of the app (e.g. under Node in
+     tests, or on desktop where none of this is needed). Restores the
+     normal layout (--kb-inset back to 0) when the field loses focus. */
+  (function setupKeyboardAvoidance(){
+    if(typeof window === "undefined" || typeof document === "undefined") return;
+    var vv = window.visualViewport;
+    var activeEl = null;
+
+    function isTextField(el){
+      if(!el || !el.tagName) return false;
+      var tag = el.tagName.toLowerCase();
+      if(tag === "textarea") return true;
+      if(tag === "input"){
+        var type = (el.type || "text").toLowerCase();
+        return ["text","search","email","number","tel","url","password"].indexOf(type) !== -1;
+      }
+      return false;
+    }
+
+    function applyKeyboardInset(px){
+      try{
+        if(document.documentElement && document.documentElement.style && document.documentElement.style.setProperty){
+          document.documentElement.style.setProperty("--kb-inset", Math.max(0, px) + "px");
+        }
+      }catch(e){ /* best-effort only — never break the app over this */ }
+    }
+
+    function scrollFieldIntoView(el){
+      if(!el || typeof el.getBoundingClientRect !== "function") return;
+      try{
+        var viewportHeight = (vv && vv.height) || window.innerHeight;
+        var rect = el.getBoundingClientRect();
+        var margin = 16;
+        var visibleBottom = viewportHeight - margin;
+        var delta = 0;
+        if(rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
+        else if(rect.top < margin) delta = rect.top - margin;
+        if(delta !== 0){
+          var scroller = document.scrollingElement || document.documentElement;
+          if(scroller && typeof scroller.scrollTop === "number"){
+            scroller.scrollTop += delta;
+          } else if(typeof window.scrollBy === "function"){
+            window.scrollBy(0, delta);
+          }
+        }
+      }catch(e){ /* best-effort only */ }
+    }
+
+    function onViewportResize(){
+      if(!vv) return;
+      try{
+        var layoutHeight = window.innerHeight;
+        var visualHeight = vv.height + (vv.offsetTop || 0);
+        var diff = layoutHeight - visualHeight;
+        if(diff > 60){ // heuristic: a real virtual keyboard, not just a rounding blip
+          applyKeyboardInset(diff);
+          if(activeEl) scrollFieldIntoView(activeEl);
+        } else {
+          applyKeyboardInset(0);
+        }
+      }catch(e){ /* best-effort only */ }
+    }
+
+    function onFocusIn(ev){
+      var el = ev && ev.target;
+      if(!isTextField(el)) return;
+      activeEl = el;
+      // Give the keyboard/viewport a moment to finish animating in
+      // before measuring — visualViewport's resize fires fastest,
+      // the plain fallback needs a longer, more conservative delay.
+      setTimeout(function(){ scrollFieldIntoView(el); }, vv ? 60 : 300);
+    }
+    function onFocusOut(ev){
+      if(activeEl && ev && ev.target === activeEl){
+        activeEl = null;
+        applyKeyboardInset(0);
+      }
+    }
+
+    try{
+      document.addEventListener("focusin", onFocusIn, true);
+      document.addEventListener("focusout", onFocusOut, true);
+      if(vv && typeof vv.addEventListener === "function"){
+        vv.addEventListener("resize", onViewportResize);
+        vv.addEventListener("scroll", onViewportResize);
+      }
+    }catch(e){ /* best-effort only */ }
+  })();
+
   /* ---------------- init ---------------- */
   loadAndInit();
 })();

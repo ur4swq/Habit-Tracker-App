@@ -22,7 +22,10 @@ const hook = `
     MOOD_ID_MIGRATIONS: MOOD_ID_MIGRATIONS, migrateMoodIds: migrateMoodIds, persist: persist,
     loadAndInit: loadAndInit, render: render, formatDisplayDate: formatDisplayDate,
     DEFAULT_HABITS: DEFAULT_HABITS, t: t, commitAddHabit: commitAddHabit, switchView: switchView,
-    sanitizeSettings: sanitizeSettings, LANGUAGES: LANGUAGES
+    sanitizeSettings: sanitizeSettings, LANGUAGES: LANGUAGES,
+    DAILY_QUOTES: DAILY_QUOTES, dailyQuoteIndex: dailyQuoteIndex, dailyQuote: dailyQuote,
+    playAchievementSound: playAchievementSound,
+    getAchievementSoundPlayCount: function(){ return achievementSoundPlayCount; }
   };
 ` + marker;
 

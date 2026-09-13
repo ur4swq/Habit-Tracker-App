@@ -201,6 +201,159 @@ async function main(){
     assertEqual(app.state.config.habits.length, before, "whitespace-only habit name is rejected");
   }
 
+  /* ---- v1.1.0: daily quote — content completeness ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const langs = app.LANGUAGES.map(l => l.code);
+    assertEqual(langs.length, 5, "still exactly 5 supported languages");
+    let lengths = [];
+    langs.forEach(l => {
+      assert(Array.isArray(app.DAILY_QUOTES[l]), "DAILY_QUOTES has an array for " + l);
+      assert(app.DAILY_QUOTES[l].length >= 25, "DAILY_QUOTES." + l + " has at least 25 entries (has " + app.DAILY_QUOTES[l].length + ")");
+      lengths.push(app.DAILY_QUOTES[l].length);
+    });
+    assert(lengths.every(n => n === lengths[0]), "every language's quote list is the same length, so switching language keeps the same daily index");
+  }
+
+  /* ---- v1.1.0: daily quote — deterministic on local calendar date ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const n = app.DAILY_QUOTES.en.length;
+    const morning = app.dailyQuoteIndex(new Date(2026, 8, 13, 0, 1, 0), n);
+    const night = app.dailyQuoteIndex(new Date(2026, 8, 13, 23, 58, 0), n);
+    assertEqual(morning, night, "same calendar date at different times of day yields the same quote index");
+
+    const nextDay = app.dailyQuoteIndex(new Date(2026, 8, 14, 0, 1, 0), n);
+    assert(nextDay !== morning, "the very next calendar date yields a different quote index");
+
+    const acrossMonth = app.dailyQuoteIndex(new Date(2026, 9, 1, 12, 0, 0), n);
+    assert(typeof acrossMonth === "number" && acrossMonth >= 0 && acrossMonth < n, "index stays in range across a month boundary");
+  }
+
+  /* ---- v1.1.0: daily quote — reflects the currently selected language, same concept index ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    app.state.settings.language = "en";
+    const enQuote = app.dailyQuote();
+    assert(app.DAILY_QUOTES.en.indexOf(enQuote) !== -1, "English quote comes from the English list");
+    const idx = app.DAILY_QUOTES.en.indexOf(enQuote);
+
+    app.state.settings.language = "tr";
+    const trQuote = app.dailyQuote();
+    assertEqual(app.DAILY_QUOTES.tr[idx], trQuote, "switching language immediately shows the SAME daily index, translated");
+    assert(trQuote !== enQuote, "the localized quote text actually differs from the English one");
+
+    app.state.settings.language = "xx"; // unknown/corrupted language code
+    assertEqual(app.dailyQuote(), enQuote, "an unknown language code falls back to the English quote rather than crashing");
+  }
+
+  /* ---- v1.1.0: daily quote — rendered on the dashboard and updates with language ---- */
+  {
+    const { app, sandbox } = loadApp({ withArtifactStorage:false });
+    app.render();
+    const doc = sandbox.document;
+    const quoteEl = doc._rootEl.querySelector("#daily-quote");
+    assert(!!quoteEl, "a #daily-quote element is present on the dashboard");
+    assertEqual(quoteEl.textContent, app.dailyQuote(), "rendered quote text matches dailyQuote() for the current language");
+
+    app.state.settings.language = "de";
+    app.render();
+    const quoteEl2 = doc._rootEl.querySelector("#daily-quote");
+    assertEqual(quoteEl2.textContent, app.dailyQuote(), "quote re-renders in German after a language change");
+  }
+
+  /* ---- v1.1.0: brand logo with fallback ---- */
+  {
+    const { app, sandbox } = loadApp({ withArtifactStorage:false });
+    app.render();
+    const doc = sandbox.document;
+    const logo = doc._rootEl.querySelector(".brand-logo");
+    assert(!!logo, "brand logo <img> is present in the top bar");
+    assertEqual(logo.getAttribute("src"), "assets/icon.png", "brand logo points at the existing assets/icon.png");
+
+    const fallback = doc._rootEl.querySelector(".brand-mark-fallback");
+    assert(!!fallback, "a fallback mark element exists alongside the logo image");
+    assertEqual(fallback.style.display, "none", "fallback mark starts hidden while the image is expected to load");
+
+    logo.dispatch("error");
+    assertEqual(logo.style.display, "none", "on image load failure, the broken image is hidden");
+    assertEqual(fallback.style.display, "flex", "on image load failure, the fallback mark is shown instead");
+  }
+
+  /* ---- v1.1.0: 100% achievement sound — fires only on the real <100 -> 100 transition, today ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const today = app.dateStr(app.startOfDay(new Date()));
+    const enabled = app.state.config.habits.filter(h => h.enabled); // 12 default habits
+    assertEqual(enabled.length, 12, "sanity: 12 enabled habits for this test");
+
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "achievement sound has not played yet");
+
+    // Check 11 of 12 — should stay below 100%, no achievement sound.
+    for (let i = 0; i < 11; i++) app.toggleHabit(today, enabled[i].id, null);
+    assertEqual(app.computeCompletion(today).pct, 92, "11/12 is 92%, not yet 100%");
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "no achievement sound before reaching 100%");
+
+    // Check the 12th (and last) habit -> crosses from <100 to exactly 100.
+    app.toggleHabit(today, enabled[11].id, null);
+    assertEqual(app.computeCompletion(today).pct, 100, "12/12 is 100%");
+    assertEqual(app.getAchievementSoundPlayCount(), 1, "achievement sound fires exactly once on the <100 -> 100 transition");
+
+    // Uncheck one (drop below 100%), re-check it (back to 100%) — a genuine
+    // second transition through the same mechanism should fire again,
+    // same as the normal per-check sound would on every completion.
+    app.toggleHabit(today, enabled[11].id, null);
+    assertEqual(app.getAchievementSoundPlayCount(), 1, "dropping back below 100% does not itself play the achievement sound");
+    app.toggleHabit(today, enabled[11].id, null);
+    assertEqual(app.getAchievementSoundPlayCount(), 2, "re-reaching 100% from below plays the achievement sound again");
+  }
+
+  /* ---- v1.1.0: achievement sound never fires merely from loading/rendering at 100% ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const today = app.dateStr(app.startOfDay(new Date()));
+    const enabled = app.state.config.habits.filter(h => h.enabled);
+    const day = app.ensureDay(today);
+    enabled.forEach(h => { day.habits[h.id] = true; }); // seed as already-100% data, bypassing toggleHabit
+    assertEqual(app.computeCompletion(today).pct, 100, "sanity: seeded day is at 100%");
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "no achievement sound just from having 100% data present");
+
+    app.render();
+    app.render();
+    app.render();
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "no achievement sound from re-rendering an already-100% day, repeatedly");
+  }
+
+  /* ---- v1.1.0: achievement sound never fires when browsing/editing a past day ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const today = app.startOfDay(new Date());
+    const yesterday = app.dateStr(app.addDays(today, -1));
+    const enabled = app.state.config.habits.filter(h => h.enabled);
+
+    for (let i = 0; i < 11; i++) app.toggleHabit(yesterday, enabled[i].id, null);
+    app.toggleHabit(yesterday, enabled[11].id, null); // completes yesterday to 100%
+    assertEqual(app.computeCompletion(yesterday).pct, 100, "yesterday reached 100% via toggles");
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "completing a PAST day to 100% never plays the achievement sound");
+  }
+
+  /* ---- v1.1.0: achievement sound respects the Sound Effects preference ---- */
+  {
+    const { app } = loadApp({ withArtifactStorage:false });
+    const today = app.dateStr(app.startOfDay(new Date()));
+    const enabled = app.state.config.habits.filter(h => h.enabled);
+    app.state.settings.soundEffects = false;
+
+    for (let i = 0; i < 12; i++) app.toggleHabit(today, enabled[i].id, null);
+    assertEqual(app.computeCompletion(today).pct, 100, "today reached 100% with sound effects disabled");
+    assertEqual(app.getAchievementSoundPlayCount(), 0, "achievement sound does not play while Sound Effects is off");
+
+    app.state.settings.soundEffects = true;
+    app.toggleHabit(today, enabled[0].id, null); // drop below 100%
+    app.toggleHabit(today, enabled[0].id, null); // back to 100%, sound now enabled
+    assertEqual(app.getAchievementSoundPlayCount(), 1, "re-enabling Sound Effects lets a fresh 100% transition play normally");
+  }
+
   console.log("\n" + pass + " passed, " + fail + " failed");
   process.exit(fail>0 ? 1 : 0);
 }

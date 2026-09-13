@@ -1,6 +1,6 @@
 {
   "name": "habit-tracker-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A minimalist, single-file daily habit tracker.",
   "main": "main.js",
   "scripts": {
