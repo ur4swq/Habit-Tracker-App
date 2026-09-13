@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Consistency</title>
+<style>
+  :root[data-theme="dark"]{
+    --bg:#0E0E10; --surface:#151517; --surface-2:#1B1B1E;
+    --border:#26262A; --border-strong:#38383D;
+    --text:#F3F3F1; --text-dim:#93939A; --text-faint:#5A5A60;
+    --ink:255,255,255; --shadow: 0 1px 0 rgba(255,255,255,0.02);
+  }
+  :root[data-theme="light"]{
+    --bg:#FAFAF8; --surface:#FFFFFF; --surface-2:#F3F2EF;
+    --border:#E6E5E1; --border-strong:#D2D1CC;
+    --text:#181818; --text-dim:#77767A; --text-faint:#AFAEAA;
+    --ink:0,0,0; --shadow: 0 1px 0 rgba(0,0,0,0.02);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Display","Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background-color .3s ease,color .3s ease;
+    min-height:100vh;
+  }
+  .mono{ font-family:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Consolas,monospace; font-feature-settings:"tnum"; }
+  button{ font:inherit; color:inherit; background:none; border:none; cursor:pointer; padding:0; }
+  button:disabled{ cursor:default; }
+  textarea, input, select{ font:inherit; color:inherit; background:none; border:none; outline:none; }
+  a{ color:inherit; }
+  ::selection{ background:rgba(var(--ink),0.18); }
+
+  #root{ min-height:100vh; display:flex; flex-direction:column; }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; backdrop-filter:blur(10px);
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{ font-size:14px; font-weight:600; letter-spacing:.01em; }
+  .tabs{ display:flex; gap:18px; }
+  .tab{ font-size:13px; color:var(--text-dim); padding:4px 0; border-bottom:1px solid transparent; transition:color .15s ease, border-color .15s ease; }
+  .tab:hover{ color:var(--text); }
+  .tab.active{ color:var(--text); border-bottom-color:var(--text); }
+  .theme-toggle{ font-size:12px; color:var(--text-dim); border:1px solid var(--border); border-radius:20px; padding:5px 12px; transition:border-color .15s ease,color .15s ease; }
+  .theme-toggle:hover{ color:var(--text); border-color:var(--border-strong); }
+
+  .app{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:28px 20px 100px; }
+
+  /* Day nav */
+  .daynav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .daynav .arrow{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:50%; color:var(--text-dim); transition:background .15s ease,color .15s ease; }
+  .daynav .arrow:hover{ background:var(--surface-2); color:var(--text); }
+  .daynav .arrow:disabled{ opacity:.3; cursor:default; }
+  .daynav .arrow:disabled:hover{ background:none; color:var(--text-dim); }
+  .datewrap{ text-align:center; flex:1; }
+  .date-label{ font-size:14px; color:var(--text); font-weight:500; }
+  .date-sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .jump-today{ font-size:11px; color:var(--text-dim); margin-top:6px; text-decoration:underline; text-decoration-color:var(--border-strong); text-underline-offset:2px; }
+  .jump-today:hover{ color:var(--text); }
+
+  /* Greeting + progress */
+  .greeting{ font-size:26px; font-weight:600; letter-spacing:-0.01em; margin:0 0 4px; }
+  .viewing-pill{ display:inline-block; font-size:11px; color:var(--text-dim); background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-bottom:6px; }
+
+  .progress-row{ display:flex; align-items:center; gap:22px; margin:20px 0 26px; }
+  .ring-wrap{ position:relative; width:88px; height:88px; flex:none; }
+  .ring-wrap svg{ transform:rotate(-90deg); }
+  .ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; }
+  .progress-meta .count{ font-size:14px; color:var(--text-dim); }
+  .progress-meta .status{ font-size:13px; color:var(--text-faint); margin-top:4px; }
+
+  /* Habit list */
+  .section-label-row{ display:flex; align-items:baseline; justify-content:space-between; margin:34px 0 10px; }
+  .section-label{ font-size:12px; color:var(--text-faint); }
+  .text-link{ font-size:11.5px; color:var(--text-dim); text-decoration:underline; text-decoration-color:var(--border-strong); text-underline-offset:2px; }
+  .text-link:hover{ color:var(--text); }
+  .habits{ border-top:1px solid var(--border); }
+  .habit-row{ display:flex; align-items:center; gap:14px; padding:14px 2px; border-bottom:1px solid var(--border); width:100%; text-align:left; transition:opacity .15s ease; }
+  .habit-row:active{ opacity:.7; }
+  .check{ width:21px; height:21px; flex:none; border-radius:6px; border:1.5px solid var(--border-strong); display:flex; align-items:center; justify-content:center; transition:background .18s ease,border-color .18s ease,transform .18s ease; }
+  .check svg{ width:12px; height:12px; opacity:0; transform:scale(.5); transition:opacity .15s ease,transform .15s ease; }
+  .habit-row.done .check{ background:var(--text); border-color:var(--text); }
+  .habit-row.done .check svg{ opacity:1; transform:scale(1); }
+  .habit-row.pop .check{ animation:pop .32s ease; }
+  @keyframes pop{ 0%{transform:scale(1);} 40%{transform:scale(1.18);} 100%{transform:scale(1);} }
+  .habit-name{ font-size:15px; flex:1; transition:color .15s ease; }
+  .habit-row.done .habit-name{ color:var(--text-dim); }
+  .empty-note{ padding:20px 2px; color:var(--text-faint); font-size:13px; }
+
+  /* Habit management (main screen "manage" mode) */
+  .manage-row{ display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--border); }
+  .manage-row input.rename{ flex:1; font-size:14.5px; padding:4px 0; border-bottom:1px solid var(--border-strong); }
+  .manage-row .name{ flex:1; font-size:14.5px; cursor:text; }
+  .manage-row .name.disabled{ color:var(--text-faint); text-decoration:line-through; }
+  .iconbtn{ width:26px; height:26px; display:flex; align-items:center; justify-content:center; color:var(--text-faint); border-radius:6px; flex:none; }
+  .iconbtn:hover{ color:var(--text); background:var(--surface-2); }
+  .switch{ width:32px; height:19px; border-radius:20px; background:var(--border-strong); position:relative; transition:background .15s ease; flex:none; }
+  .switch.on{ background:var(--text); }
+  .switch .dot{ position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--bg); transition:transform .15s ease; }
+  .switch.on .dot{ transform:translateX(13px); background:var(--bg); }
+
+  .add-habit-row{ display:flex; gap:8px; margin:14px 0 4px; }
+  .add-habit-row input{ flex:1; border-bottom:1px solid var(--border-strong); font-size:14px; padding:8px 0; }
+  .add-habit-row input::placeholder{ color:var(--text-faint); }
+  .btn-outline{ font-size:12.5px; padding:9px 14px; border:1px solid var(--border-strong); border-radius:8px; color:var(--text); transition:border-color .15s ease,background .15s ease; }
+  .btn-outline:hover{ background:var(--surface-2); }
+  .btn-primary{ font-size:12.5px; padding:9px 16px; border-radius:8px; background:var(--text); color:var(--bg); transition:opacity .15s ease; }
+  .btn-primary:hover{ opacity:.85; }
+  .btn-primary:disabled{ opacity:.35; }
+
+  /* Mood */
+  .mood-row{ display:flex; gap:8px; }
+  .mood-btn{ flex:1; padding:12px 6px; border:1px solid var(--border); border-radius:10px; font-size:12.5px; color:var(--text-dim); text-align:center; transition:all .15s ease; }
+  .mood-btn:hover{ border-color:var(--border-strong); }
+  .mood-btn.selected{ border-color:var(--text); color:var(--text); background:var(--surface-2); }
+
+  /* Journal */
+  .journal-wrap{ position:relative; }
+  textarea.journal{ width:100%; min-height:88px; resize:vertical; line-height:1.55; font-size:14.5px; border-bottom:1px solid var(--border); padding:2px 0 10px; }
+  textarea.journal::placeholder{ color:var(--text-faint); }
+  textarea.journal:focus{ border-bottom-color:var(--border-strong); }
+  .save-flag{ position:absolute; right:0; bottom:-18px; font-size:11px; color:var(--text-faint); opacity:0; transition:opacity .3s ease; }
+  .save-flag.show{ opacity:1; }
+
+  .footer-row{ margin-top:44px; display:flex; align-items:center; justify-content:space-between; }
+  .insight{ font-size:12.5px; color:var(--text-faint); }
+  .reset-link{ font-size:12px; color:var(--text-faint); }
+  .reset-link:hover{ color:var(--text-dim); }
+  .reset-confirm{ font-size:12px; color:var(--text); border-bottom:1px solid var(--text); }
+
+  /* History */
+  .stats-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:30px; }
+  .stat{ padding:14px 6px; text-align:center; border-right:1px solid var(--border); }
+  .stat:last-child{ border-right:none; }
+  .stat .num{ font-size:18px; font-weight:600; }
+  .stat .lbl{ font-size:10px; color:var(--text-faint); margin-top:4px; line-height:1.3; }
+
+  .month-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .month-nav .arrow{ width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; color:var(--text-dim); }
+  .month-nav .arrow:hover{ background:var(--surface-2); color:var(--text); }
+  .month-title{ font-size:14px; font-weight:600; }
+
+  .weekday-row{ display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:6px; }
+  .weekday-row span{ text-align:center; font-size:10.5px; color:var(--text-faint); }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal-cell{ position:relative; aspect-ratio:1; border-radius:7px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10.5px; color:var(--text-faint); }
+  .cal-cell.blank{ border:none; }
+  .cal-cell.clickable{ cursor:pointer; }
+  .cal-cell.clickable:hover{ border-color:var(--border-strong); }
+  .cal-cell.today{ box-shadow:0 0 0 1.5px var(--text) inset; }
+  .cal-cell.full::after{ content:""; position:absolute; top:3px; right:3px; width:4px; height:4px; border-radius:50%; background:var(--bg); }
+
+  /* Settings / preferences */
+  .pref-block{ margin-bottom:30px; }
+  .pref-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 2px; border-bottom:1px solid var(--border); }
+  .pref-label{ font-size:14px; }
+  .pref-hint{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+  .lang-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .lang-btn{ padding:9px 13px; border:1px solid var(--border); border-radius:8px; font-size:12.5px; color:var(--text-dim); transition:all .15s ease; }
+  .lang-btn:hover{ border-color:var(--border-strong); }
+  .lang-btn.selected{ border-color:var(--text); color:var(--text); background:var(--surface-2); }
+  .save-row{ display:flex; align-items:center; gap:14px; margin-top:24px; }
+  .settings-saved-flag{ font-size:12px; color:var(--text-faint); opacity:0; transition:opacity .3s ease; }
+  .settings-saved-flag.show{ opacity:1; }
+
+  .data-actions{ display:flex; gap:10px; margin-top:8px; }
+  input[type=file]{ display:none; }
+
+  .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:12.5px; padding:9px 16px; border-radius:20px; opacity:0; transition:opacity .25s ease,transform .25s ease; pointer-events:none; z-index:50; box-shadow:0 6px 24px rgba(0,0,0,0.18); }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  :focus-visible{ outline:2px solid var(--text); outline-offset:2px; }
+
+  @media (max-width:420px){
+    .stats-grid{ grid-template-columns:repeat(3,1fr); }
+    .stat:nth-child(3n){ border-right:none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition-duration:0.001ms !important; animation-duration:0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+
+(function(){
+  "use strict";
+
+  /* ==================================================================
+     i18n — centralized dictionary. Every user-facing string is looked
+     up through t(key, vars) rather than hardcoded, so adding a new
+     language later means adding one object here, not touching the UI
+     code. Default language is English.
+     ================================================================== */
+  var LANGUAGES = [
+    {code:"en", name:"English"},
+    {code:"tr", name:"Türkçe"},
+    {code:"es", name:"Español"},
+    {code:"de", name:"Deutsch"},
+    {code:"fr", name:"Français"}
+  ];
+
+  var STRINGS = {
+    en:{
+      tabToday:"Today", tabHistory:"History", tabSettings:"Settings",
+      themeLight:"Light", themeDark:"Dark",
+      today:"Today", jumpToday:"Jump to today",
+      viewingPast:"Viewing a past day", viewingFuture:"Viewing a future day",
+      greetMorning:"Good morning.", greetAfternoon:"Good afternoon.", greetEvening:"Good evening.",
+      completedOf:"{completed} / {total} completed",
+      statusJustStart:"Just start.", statusKeepGoing:"Keep going.", statusGoodProgress:"Good progress.",
+      statusAlmostThere:"Almost there.", statusPerfectDay:"Perfect day.",
+      habitsLabel:"Habits", manage:"Manage", doneManaging:"Done",
+      noHabitsEnabled:"No habits enabled. Add one below.",
+      addHabit:"Add habit", addHabitPlaceholder:"Add a new habit...", add:"Add",
+      deleteConfirm:"Delete?",
+      moodLabel:"Mood", moodUnhappy:"Unhappy", moodNormal:"Normal", moodHappy:"Happy", moodExtraHappy:"Extra Happy",
+      journalLabel:"How was your day?", journalPlaceholder:"Write a few words about today...", saved:"Saved",
+      resetDay:"Reset day", confirmReset:"Confirm reset?", dayReset:"Day reset",
+      insightStreak:"You're on a {n} day streak.",
+      insightPerfectMonth:"You completed all habits {n} time this month.",
+      insightPerfectMonthPlural:"You completed all habits {n} times this month.",
+      insightWeekAvg:"Your average completion this week is {n}%.",
+      insightStart:"Start today to build your first streak.",
+      statCurrentStreak:"Current streak", statBestStreak:"Best streak", statAvgCompletion:"Avg completion",
+      statPerfectDays:"Perfect days", statDaysTracked:"Days tracked",
+      preferences:"Preferences", language:"Language", soundEffects:"Sound Effects",
+      soundEffectsHint:"Short, minimal sounds for a few key actions.",
+      on:"On", off:"Off", save:"Save", settingsSaved:"Settings saved",
+      dataLabel:"Data", exportJSON:"Export JSON", importJSON:"Import JSON",
+      habitAdded:"Habit added", habitDeleted:"Habit deleted", habitAlreadyExists:"That habit already exists",
+      importComplete:"Import complete", fileFormatNotRecognized:"File format not recognized",
+      couldntReadFile:"Couldn't read that file", exported:"Exported",
+      backToToday:"Back to Today", somethingWrong:"Something went wrong.",
+      renderErrorMsg:"That screen hit an error. Your data is safe — try going back to today."
+    },
+    tr:{
+      tabToday:"Bugün", tabHistory:"Geçmiş", tabSettings:"Ayarlar",
+      themeLight:"Aydınlık", themeDark:"Karanlık",
+      today:"Bugün", jumpToday:"Bugüne dön",
+      viewingPast:"Geçmiş bir günü görüntülüyorsun", viewingFuture:"Gelecek bir günü görüntülüyorsun",
+      greetMorning:"Günaydın.", greetAfternoon:"İyi günler.", greetEvening:"İyi akşamlar.",
+      completedOf:"{completed} / {total} tamamlandı",
+      statusJustStart:"Hemen başla.", statusKeepGoing:"Devam et.", statusGoodProgress:"İyi gidiyor.",
+      statusAlmostThere:"Az kaldı.", statusPerfectDay:"Mükemmel gün.",
+      habitsLabel:"Alışkanlıklar", manage:"Düzenle", doneManaging:"Bitti",
+      noHabitsEnabled:"Etkin alışkanlık yok. Aşağıdan bir tane ekle.",
+      addHabit:"Alışkanlık ekle", addHabitPlaceholder:"Yeni bir alışkanlık ekle...", add:"Ekle",
+      deleteConfirm:"Silinsin mi?",
+      moodLabel:"Ruh hali", moodUnhappy:"Mutsuz", moodNormal:"Normal", moodHappy:"Mutlu", moodExtraHappy:"Çok Mutlu",
+      journalLabel:"Günün nasıldı?", journalPlaceholder:"Bugün hakkında birkaç kelime yaz...", saved:"Kaydedildi",
+      resetDay:"Günü sıfırla", confirmReset:"Sıfırlansın mı?", dayReset:"Gün sıfırlandı",
+      insightStreak:"{n} günlük bir serin var.",
+      insightPerfectMonth:"Bu ay tüm alışkanlıkları {n} kez tamamladın.",
+      insightPerfectMonthPlural:"Bu ay tüm alışkanlıkları {n} kez tamamladın.",
+      insightWeekAvg:"Bu haftaki ortalama tamamlanma oranın %{n}.",
+      insightStart:"İlk serini oluşturmak için bugün başla.",
+      statCurrentStreak:"Güncel seri", statBestStreak:"En iyi seri", statAvgCompletion:"Ort. tamamlanma",
+      statPerfectDays:"Mükemmel gün", statDaysTracked:"Takip edilen gün",
+      preferences:"Tercihler", language:"Dil", soundEffects:"Ses Efektleri",
+      soundEffectsHint:"Bazı önemli işlemler için kısa, minimal sesler.",
+      on:"Açık", off:"Kapalı", save:"Kaydet", settingsSaved:"Ayarlar kaydedildi",
+      dataLabel:"Veri", exportJSON:"JSON Dışa Aktar", importJSON:"JSON İçe Aktar",
+      habitAdded:"Alışkanlık eklendi", habitDeleted:"Alışkanlık silindi", habitAlreadyExists:"Bu alışkanlık zaten var",
+      importComplete:"İçe aktarma tamamlandı", fileFormatNotRecognized:"Dosya biçimi tanınmadı",
+      couldntReadFile:"Dosya okunamadı", exported:"Dışa aktarıldı",
+      backToToday:"Bugüne dön", somethingWrong:"Bir şeyler ters gitti.",
+      renderErrorMsg:"Bu ekranda bir hata oluştu. Verilerin güvende — bugüne dönmeyi dene."
+    },
+    es:{
+      tabToday:"Hoy", tabHistory:"Historial", tabSettings:"Ajustes",
+      themeLight:"Claro", themeDark:"Oscuro",
+      today:"Hoy", jumpToday:"Ir a hoy",
+      viewingPast:"Viendo un día pasado", viewingFuture:"Viendo un día futuro",
+      greetMorning:"Buenos días.", greetAfternoon:"Buenas tardes.", greetEvening:"Buenas noches.",
+      completedOf:"{completed} / {total} completados",
+      statusJustStart:"Solo empieza.", statusKeepGoing:"Sigue así.", statusGoodProgress:"Buen progreso.",
+      statusAlmostThere:"Casi lo logras.", statusPerfectDay:"Día perfecto.",
+      habitsLabel:"Hábitos", manage:"Gestionar", doneManaging:"Listo",
+      noHabitsEnabled:"No hay hábitos activos. Añade uno abajo.",
+      addHabit:"Añadir hábito", addHabitPlaceholder:"Añade un nuevo hábito...", add:"Añadir",
+      deleteConfirm:"¿Eliminar?",
+      moodLabel:"Estado de ánimo", moodUnhappy:"Triste", moodNormal:"Normal", moodHappy:"Feliz", moodExtraHappy:"Muy Feliz",
+      journalLabel:"¿Cómo fue tu día?", journalPlaceholder:"Escribe unas palabras sobre hoy...", saved:"Guardado",
+      resetDay:"Reiniciar día", confirmReset:"¿Confirmar reinicio?", dayReset:"Día reiniciado",
+      insightStreak:"Llevas una racha de {n} días.",
+      insightPerfectMonth:"Completaste todos los hábitos {n} vez este mes.",
+      insightPerfectMonthPlural:"Completaste todos los hábitos {n} veces este mes.",
+      insightWeekAvg:"Tu media de esta semana es {n}%.",
+      insightStart:"Empieza hoy para crear tu primera racha.",
+      statCurrentStreak:"Racha actual", statBestStreak:"Mejor racha", statAvgCompletion:"Media",
+      statPerfectDays:"Días perfectos", statDaysTracked:"Días registrados",
+      preferences:"Preferencias", language:"Idioma", soundEffects:"Efectos de Sonido",
+      soundEffectsHint:"Sonidos breves y mínimos para algunas acciones clave.",
+      on:"Activado", off:"Desactivado", save:"Guardar", settingsSaved:"Ajustes guardados",
+      dataLabel:"Datos", exportJSON:"Exportar JSON", importJSON:"Importar JSON",
+      habitAdded:"Hábito añadido", habitDeleted:"Hábito eliminado", habitAlreadyExists:"Ese hábito ya existe",
+      importComplete:"Importación completa", fileFormatNotRecognized:"Formato de archivo no reconocido",
+      couldntReadFile:"No se pudo leer el archivo", exported:"Exportado",
+      backToToday:"Volver a hoy", somethingWrong:"Algo salió mal.",
+      renderErrorMsg:"Esta pantalla tuvo un error. Tus datos están a salvo — intenta volver a hoy."
+    },
+    de:{
+      tabToday:"Heute", tabHistory:"Verlauf", tabSettings:"Einstellungen",
+      themeLight:"Hell", themeDark:"Dunkel",
+      today:"Heute", jumpToday:"Zu heute springen",
+      viewingPast:"Du siehst einen vergangenen Tag", viewingFuture:"Du siehst einen zukünftigen Tag",
+      greetMorning:"Guten Morgen.", greetAfternoon:"Guten Tag.", greetEvening:"Guten Abend.",
+      completedOf:"{completed} / {total} erledigt",
+      statusJustStart:"Einfach anfangen.", statusKeepGoing:"Weiter so.", statusGoodProgress:"Guter Fortschritt.",
+      statusAlmostThere:"Fast geschafft.", statusPerfectDay:"Perfekter Tag.",
+      habitsLabel:"Gewohnheiten", manage:"Verwalten", doneManaging:"Fertig",
+      noHabitsEnabled:"Keine aktiven Gewohnheiten. Füge unten eine hinzu.",
+      addHabit:"Gewohnheit hinzufügen", addHabitPlaceholder:"Neue Gewohnheit hinzufügen...", add:"Hinzufügen",
+      deleteConfirm:"Löschen?",
+      moodLabel:"Stimmung", moodUnhappy:"Unglücklich", moodNormal:"Normal", moodHappy:"Glücklich", moodExtraHappy:"Sehr Glücklich",
+      journalLabel:"Wie war dein Tag?", journalPlaceholder:"Schreib ein paar Worte über heute...", saved:"Gespeichert",
+      resetDay:"Tag zurücksetzen", confirmReset:"Zurücksetzen bestätigen?", dayReset:"Tag zurückgesetzt",
+      insightStreak:"Du hast eine {n}-Tage-Serie.",
+      insightPerfectMonth:"Du hast diesen Monat alle Gewohnheiten {n} Mal komplett erledigt.",
+      insightPerfectMonthPlural:"Du hast diesen Monat alle Gewohnheiten {n} Mal komplett erledigt.",
+      insightWeekAvg:"Dein Durchschnitt diese Woche liegt bei {n}%.",
+      insightStart:"Fang heute an, um deine erste Serie zu starten.",
+      statCurrentStreak:"Aktuelle Serie", statBestStreak:"Beste Serie", statAvgCompletion:"Ø Erledigung",
+      statPerfectDays:"Perfekte Tage", statDaysTracked:"Erfasste Tage",
+      preferences:"Einstellungen", language:"Sprache", soundEffects:"Soundeffekte",
+      soundEffectsHint:"Kurze, minimale Töne für ein paar wichtige Aktionen.",
+      on:"An", off:"Aus", save:"Speichern", settingsSaved:"Einstellungen gespeichert",
+      dataLabel:"Daten", exportJSON:"JSON exportieren", importJSON:"JSON importieren",
+      habitAdded:"Gewohnheit hinzugefügt", habitDeleted:"Gewohnheit gelöscht", habitAlreadyExists:"Diese Gewohnheit gibt es schon",
+      importComplete:"Import abgeschlossen", fileFormatNotRecognized:"Dateiformat nicht erkannt",
+      couldntReadFile:"Datei konnte nicht gelesen werden", exported:"Exportiert",
+      backToToday:"Zurück zu heute", somethingWrong:"Etwas ist schiefgelaufen.",
+      renderErrorMsg:"Auf diesem Bildschirm ist ein Fehler aufgetreten. Deine Daten sind sicher — versuch, zu heute zurückzukehren."
+    },
+    fr:{
+      tabToday:"Aujourd'hui", tabHistory:"Historique", tabSettings:"Réglages",
+      themeLight:"Clair", themeDark:"Sombre",
+      today:"Aujourd'hui", jumpToday:"Aller à aujourd'hui",
+      viewingPast:"Vous consultez un jour passé", viewingFuture:"Vous consultez un jour futur",
+      greetMorning:"Bonjour.", greetAfternoon:"Bon après-midi.", greetEvening:"Bonsoir.",
+      completedOf:"{completed} / {total} terminés",
+      statusJustStart:"Lance-toi.", statusKeepGoing:"Continue.", statusGoodProgress:"Bonne progression.",
+      statusAlmostThere:"Presque terminé.", statusPerfectDay:"Journée parfaite.",
+      habitsLabel:"Habitudes", manage:"Gérer", doneManaging:"Terminé",
+      noHabitsEnabled:"Aucune habitude active. Ajoutez-en une ci-dessous.",
+      addHabit:"Ajouter une habitude", addHabitPlaceholder:"Ajouter une nouvelle habitude...", add:"Ajouter",
+      deleteConfirm:"Supprimer ?",
+      moodLabel:"Humeur", moodUnhappy:"Triste", moodNormal:"Normal", moodHappy:"Heureux", moodExtraHappy:"Très Heureux",
+      journalLabel:"Comment était votre journée ?", journalPlaceholder:"Écrivez quelques mots sur aujourd'hui...", saved:"Enregistré",
+      resetDay:"Réinitialiser la journée", confirmReset:"Confirmer la réinitialisation ?", dayReset:"Journée réinitialisée",
+      insightStreak:"Vous avez une série de {n} jours.",
+      insightPerfectMonth:"Vous avez complété toutes les habitudes {n} fois ce mois-ci.",
+      insightPerfectMonthPlural:"Vous avez complété toutes les habitudes {n} fois ce mois-ci.",
+      insightWeekAvg:"Votre moyenne cette semaine est de {n}%.",
+      insightStart:"Commencez aujourd'hui pour créer votre première série.",
+      statCurrentStreak:"Série actuelle", statBestStreak:"Meilleure série", statAvgCompletion:"Moyenne",
+      statPerfectDays:"Jours parfaits", statDaysTracked:"Jours suivis",
+      preferences:"Préférences", language:"Langue", soundEffects:"Effets Sonores",
+      soundEffectsHint:"Des sons courts et minimaux pour quelques actions clés.",
+      on:"Activé", off:"Désactivé", save:"Enregistrer", settingsSaved:"Réglages enregistrés",
+      dataLabel:"Données", exportJSON:"Exporter en JSON", importJSON:"Importer un JSON",
+      habitAdded:"Habitude ajoutée", habitDeleted:"Habitude supprimée", habitAlreadyExists:"Cette habitude existe déjà",
+      importComplete:"Importation terminée", fileFormatNotRecognized:"Format de fichier non reconnu",
+      couldntReadFile:"Impossible de lire ce fichier", exported:"Exporté",
+      backToToday:"Retour à aujourd'hui", somethingWrong:"Un problème est survenu.",
+      renderErrorMsg:"Cet écran a rencontré une erreur. Vos données sont en sécurité — essayez de revenir à aujourd'hui."
+    }
+  };
+
+  var WEEKDAY_NAMES_I18N = {
+    en:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+    tr:["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+    es:["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+    de:["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"],
+    fr:["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"]
+  };
+  var MONTH_NAMES_I18N = {
+    en:["January","February","March","April","May","June","July","August","September","October","November","December"],
+    tr:["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
+    es:["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+    de:["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"],
+    fr:["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"]
+  };
+  var WEEKDAY_SHORT_I18N = {
+    en:["Su","Mo","Tu","We","Th","Fr","Sa"],
+    tr:["Pz","Pt","Sa","Ça","Pe","Cu","Ct"],
+    es:["Do","Lu","Ma","Mi","Ju","Vi","Sá"],
+    de:["So","Mo","Di","Mi","Do","Fr","Sa"],
+    fr:["Di","Lu","Ma","Me","Je","Ve","Sa"]
+  };
+  var MOOD_LABEL_KEYS = { unhappy:"moodUnhappy", normal:"moodNormal", happy:"moodHappy", extra_happy:"moodExtraHappy" };
+  var VALID_LANGS = LANGUAGES.map(function(l){ return l.code; });
+
+  function t(key, vars){
+    var lang = (state && state.settings && state.settings.language) || "en";
+    var dict = STRINGS[lang] || STRINGS.en;
+    var str = dict[key] !== undefined ? dict[key] : STRINGS.en[key];
+    if(str === undefined) return key;
+    if(vars){
+      Object.keys(vars).forEach(function(k){
+        str = str.split("{" + k + "}").join(vars[k]);
+      });
+    }
+    return str;
+  }
+
+  /* ---------------- constants ---------------- */
+  var STORAGE_KEY = "consistency-tracker-data";
+  var DEFAULT_HABITS = [
+    {id:"h1",  name:"Wake up at 7",             enabled:true},
+    {id:"h2",  name:"Cold shower",              enabled:true},
+    {id:"h3",  name:"Study session 1 — 1h",     enabled:true},
+    {id:"h4",  name:"Drink 3L water",           enabled:true},
+    {id:"h5",  name:"Clean my environment",     enabled:true},
+    {id:"h6",  name:"Go to the gym",            enabled:true},
+    {id:"h7",  name:"Study session 2 — 1h",     enabled:true},
+    {id:"h8",  name:"Meditation — 10 min",      enabled:true},
+    {id:"h9",  name:"No junk food",             enabled:true},
+    {id:"h10", name:"Skin and haircare",        enabled:true},
+    {id:"h11", name:"Less than 1h screen time", enabled:true},
+    {id:"h12", name:"Sleep at 11",              enabled:true}
+  ];
+  var MOODS = ["unhappy","normal","happy","extra_happy"];
+  var MOOD_ID_MIGRATIONS = { mutsuz:"unhappy" }; // legacy ids -> current ids
+
+  /* ---------------- date helpers ---------------- */
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+  function dateStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function parseDateStr(s){ var p=s.split("-"); return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)); }
+  function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function addDays(d, n){ var r=new Date(d); r.setDate(r.getDate()+n); return r; }
+  function isSameDay(a,b){ return dateStr(a)===dateStr(b); }
+  function formatDisplayDate(d, today){
+    var lang = (state && state.settings && state.settings.language) || "en";
+    var weekdayNames = WEEKDAY_NAMES_I18N[lang] || WEEKDAY_NAMES_I18N.en;
+    var monthNames = MONTH_NAMES_I18N[lang] || MONTH_NAMES_I18N.en;
+    var s = weekdayNames[d.getDay()]+", "+monthNames[d.getMonth()]+" "+d.getDate();
+    if(d.getFullYear()!==today.getFullYear()) s += ", "+d.getFullYear();
+    return s;
+  }
+
+  /* ---------------- state ---------------- */
+  var state = {
+    config: { habits: DEFAULT_HABITS.slice().map(function(h){return {id:h.id,name:h.name,enabled:h.enabled};}), theme:"dark" },
+    days: {},
+    settings: { language:"en", soundEffects:true },
+    view: "dashboard",           // dashboard | history | settings
+    selectedDate: startOfDay(new Date()),
+    historyMonth: (function(){ var t2=startOfDay(new Date()); return new Date(t2.getFullYear(), t2.getMonth(), 1); })(),
+    editingHabitId: null,
+    resetConfirming: false,
+    deleteConfirmingId: null,
+    habitsEditMode: false,
+    mainAddOpen: false,
+    settingsDraft: null // populated when entering the Settings view
+  };
+
+  /* ---------------- sound effects (generated, no external assets) ----------------
+     Very small Web Audio blips. Never allowed to throw or block the app —
+     any failure here is swallowed, since a missing sound is a non-issue
+     but a crash from a sound helper would not be. */
+  var audioCtx = null;
+  function getAudioCtx(){
+    var Ctx = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
+    if(!Ctx) return null;
+    if(!audioCtx){ try{ audioCtx = new Ctx(); }catch(e){ return null; } }
+    return audioCtx;
+  }
+  function tone(freq, duration, delay, volume){
+    if(!state.settings.soundEffects) return;
+    try{
+      var ctx = getAudioCtx();
+      if(!ctx) return;
+      var t0 = ctx.currentTime + (delay || 0);
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(volume || 0.05, t0 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + duration + 0.02);
+    }catch(e){ /* audio is decorative only — never let it break the app */ }
+  }
+  function playCheckSound(){ tone(880, 0.08); }
+  function playAddSound(){ tone(640, 0.06, 0); tone(980, 0.08, 0.05); }
+  function playSaveSound(){ tone(700, 0.07, 0); tone(1050, 0.1, 0.08); }
+
+  /* ---------------- storage abstraction ----------------
+     The app must never depend exclusively on Claude's artifact storage:
+     - Inside claude.ai, window.storage is used when available, and every
+       write is mirrored into localStorage as a safety net.
+     - Outside claude.ai (a downloaded/standalone file, a plain static
+       host, a future Electron/Tauri shell), window.storage does not
+       exist at all, so the layer transparently uses localStorage only.
+     - If the artifact API exists but errors at runtime, we log it once
+       (not on every keystroke) and keep working entirely off
+       localStorage for the rest of the session. */
+  var StorageLayer = (function(){
+    var artifactAvailable = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function" && typeof window.storage.set === "function");
+    var artifactBroken = false;
+    var warnedOnce = false;
+
+    function warnOnce(msg, err){
+      if(warnedOnce) return;
+      warnedOnce = true;
+      console.warn(msg, err || "");
+    }
+
+    function localGet(key){
+      try{
+        var raw = localStorage.getItem(key);
+        return raw===null ? null : {key:key, value:raw, shared:false};
+      }catch(e){
+        warnOnce("localStorage read unavailable — running in memory only this session.", e);
+        return null;
+      }
+    }
+    function localSet(key, value){
+      try{
+        localStorage.setItem(key, value);
+        return true;
+      }catch(e){
+        warnOnce("localStorage write unavailable — data will not persist across refresh.", e);
+        return false;
+      }
+    }
+
+    function get(key){
+      if(artifactAvailable && !artifactBroken){
+        return window.storage.get(key, false)
+          .then(function(result){
+            if(result && typeof result.value === "string"){
+              localSet(key, result.value);
+              return result;
+            }
+            return localGet(key);
+          })
+          .catch(function(err){
+            artifactBroken = true;
+            warnOnce("Artifact storage unavailable — falling back to this browser's local storage.", err);
+            return localGet(key);
+          });
+      }
+      return Promise.resolve(localGet(key));
+    }
+
+    function set(key, value){
+      var localOk = localSet(key, value);
+      if(artifactAvailable && !artifactBroken){
+        return window.storage.set(key, value, false).catch(function(err){
+          artifactBroken = true;
+          warnOnce("Artifact storage unavailable — continuing with local storage only.", err);
+          return null;
+        });
+      }
+      return Promise.resolve(localOk);
+    }
+
+    return {get:get, set:set};
+  })();
+
+  var saveTimer = null;
+  function persist(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      var payload;
+      try{
+        payload = JSON.stringify({config:state.config, days:state.days, settings:state.settings});
+      }catch(e){
+        console.error("Could not serialize app state", e);
+        return;
+      }
+      StorageLayer.set(STORAGE_KEY, payload);
+    }, 260);
+  }
+
+  function migrateMoodIds(){
+    Object.keys(state.days).forEach(function(ds){
+      var day = state.days[ds];
+      if(day && day.mood && MOOD_ID_MIGRATIONS[day.mood]){
+        day.mood = MOOD_ID_MIGRATIONS[day.mood];
+      }
+    });
+  }
+
+  function sanitizeSettings(s){
+    var out = {language:"en", soundEffects:true};
+    if(s && typeof s === "object"){
+      if(typeof s.language === "string" && VALID_LANGS.indexOf(s.language) !== -1) out.language = s.language;
+      if(typeof s.soundEffects === "boolean") out.soundEffects = s.soundEffects;
+    }
+    return out;
+  }
+
+  function loadAndInit(){
+    // Render immediately with sane defaults so the app is never blank
+    // while storage is being read (and never blank if reading fails).
+    document.documentElement.setAttribute("data-theme", state.config.theme || "dark");
+    render();
+
+    StorageLayer.get(STORAGE_KEY).then(function(result){
+      if(result && result.value){
+        try{
+          var parsed = JSON.parse(result.value);
+          if(parsed && parsed.config && Array.isArray(parsed.config.habits)) state.config = parsed.config;
+          if(parsed && parsed.days && typeof parsed.days === "object") state.days = parsed.days;
+          state.settings = sanitizeSettings(parsed && parsed.settings);
+        }catch(e){
+          console.warn("Saved data was corrupted and could not be read — starting fresh.", e);
+        }
+      }
+    }).catch(function(err){
+      console.warn("Could not load saved data — starting fresh.", err);
+    }).then(function(){
+      if(!state.config.theme) state.config.theme = "dark";
+      migrateMoodIds();
+      document.documentElement.setAttribute("data-theme", state.config.theme);
+      render();
+    });
+  }
+
+  /* ---------------- data model helpers ---------------- */
+  function getDay(ds){ return state.days[ds]; }
+  function ensureDay(ds){
+    if(!state.days[ds]) state.days[ds] = {habits:{}, mood:null, journal:""};
+    return state.days[ds];
+  }
+  function enabledHabits(){ return state.config.habits.filter(function(h){return h.enabled;}); }
+  function computeCompletion(ds){
+    var day = state.days[ds];
+    var enabled = enabledHabits();
+    var total = enabled.length;
+    if(total===0) return {completed:0, total:0, pct:0};
+    var completed = 0;
+    if(day){
+      for(var i=0;i<enabled.length;i++){ if(day.habits[enabled[i].id]) completed++; }
+    }
+    var pct = Math.round((completed/total)*100);
+    return {completed:completed, total:total, pct:pct};
+  }
+  function isSuccessDay(ds){
+    if(!state.days[ds]) return false;
+    return computeCompletion(ds).pct >= 80;
+  }
+  function statusMessage(pct){
+    if(pct>=100) return t("statusPerfectDay");
+    if(pct>=75) return t("statusAlmostThere");
+    if(pct>=50) return t("statusGoodProgress");
+    if(pct>=25) return t("statusKeepGoing");
+    return t("statusJustStart");
+  }
+
+  function currentStreak(){
+    var today = startOfDay(new Date());
+    var d = new Date(today);
+    if(!isSuccessDay(dateStr(today))) d = addDays(d, -1);
+    var streak = 0;
+    while(true){
+      var ds = dateStr(d);
+      if(isSuccessDay(ds)){ streak++; d = addDays(d,-1); } else break;
+      if(streak>3660) break; // safety
+    }
+    return streak;
+  }
+  function bestStreakAndStats(){
+    var today = startOfDay(new Date());
+    var keys = Object.keys(state.days).filter(function(ds){ return parseDateStr(ds) <= today; });
+    if(keys.length===0) return {best:0, avg:0, at100:0, total:0};
+    var dates = keys.map(parseDateStr).sort(function(a,b){return a-b;});
+    var minDate = dates[0];
+    var d = new Date(minDate);
+    var cur=0, best=0, sum=0, count=0, at100=0;
+    while(d<=today){
+      var ds = dateStr(d);
+      if(state.days[ds]){
+        var c = computeCompletion(ds);
+        sum += c.pct; count++;
+        if(c.pct===100) at100++;
+        if(c.pct>=80){ cur++; best=Math.max(best,cur); } else cur=0;
+      } else {
+        cur = 0;
+      }
+      d = addDays(d,1);
+    }
+    return {best:best, avg: count? Math.round(sum/count) : 0, at100:at100, total:count};
+  }
+
+  function computeInsight(){
+    var cs = currentStreak();
+    if(cs>=2) return t("insightStreak", {n:cs});
+    var now = startOfDay(new Date());
+    var monthKey = now.getFullYear()+"-"+pad(now.getMonth()+1);
+    var monthPerfect = 0;
+    Object.keys(state.days).forEach(function(ds){
+      if(ds.slice(0,7)===monthKey && computeCompletion(ds).pct===100) monthPerfect++;
+    });
+    if(monthPerfect>0) return t(monthPerfect===1 ? "insightPerfectMonth" : "insightPerfectMonthPlural", {n:monthPerfect});
+    var sum=0,count=0;
+    for(var i=0;i<7;i++){
+      var ds = dateStr(addDays(now,-i));
+      if(state.days[ds]){ sum += computeCompletion(ds).pct; count++; }
+    }
+    if(count>0) return t("insightWeekAvg", {n:Math.round(sum/count)});
+    return t("insightStart");
+  }
+
+  /* ---------------- toast ---------------- */
+  var toastTimer=null;
+  function showToast(msg){
+    var el = document.getElementById("toast");
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+  }
+
+  /* ---------------- DOM helper ---------------- */
+  function h(tag, attrs, children){
+    var node = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function(k){
+      if(k==="class") node.className = attrs[k];
+      else if(k==="text") node.textContent = attrs[k];
+      else if(k==="html") node.innerHTML = attrs[k];
+      else if(k.indexOf("on")===0 && typeof attrs[k]==="function") node.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+      else if(k==="disabled") { if(attrs[k]) node.setAttribute("disabled","disabled"); }
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children||[]).forEach(function(c){ if(c) node.appendChild(c); });
+    return node;
+  }
+  function icon(pathD, size){
+    var s = size||12;
+    var svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("viewBox","0 0 16 16");
+    svg.setAttribute("width",s); svg.setAttribute("height",s);
+    var p = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d", pathD);
+    p.setAttribute("fill","none");
+    p.setAttribute("stroke","currentColor");
+    p.setAttribute("stroke-width","1.8");
+    p.setAttribute("stroke-linecap","round");
+    p.setAttribute("stroke-linejoin","round");
+    svg.appendChild(p);
+    return svg;
+  }
+  var ICONS = {
+    check:"M3 8.2 L6.3 11.5 L13 4.3",
+    chevronLeft:"M10 3 L5 8 L10 13",
+    chevronRight:"M6 3 L11 8 L6 13",
+    trash:"M3.5 4.5 H12.5 M6 4.5 V3 A1 1 0 0 1 7 2 H9 A1 1 0 0 1 10 3 V4.5 M6.5 7 V12 M9.5 7 V12 M4.5 4.5 L5 13 A1 1 0 0 0 6 14 H10 A1 1 0 0 0 11 13 L11.5 4.5",
+    up:"M4 10 L8 5 L12 10",
+    down:"M4 6 L8 11 L12 6"
+  };
+
+  /* ---------------- render root ---------------- */
+  function render(){
+    var root = document.getElementById("root");
+    if(!root) return;
+    try{
+      root.innerHTML = "";
+      root.appendChild(renderTopbar());
+      var app = h("div",{class:"app"});
+      if(state.view==="dashboard") app.appendChild(renderDashboard());
+      else if(state.view==="history") app.appendChild(renderHistory());
+      else if(state.view==="settings") app.appendChild(renderSettings());
+      root.appendChild(app);
+      var toast = h("div",{class:"toast", id:"toast"});
+      root.appendChild(toast);
+    }catch(err){
+      console.error("Render failed", err);
+      root.innerHTML = "";
+      var fallback = h("div",{class:"app"});
+      fallback.appendChild(h("div",{class:"greeting", text:t("somethingWrong")}));
+      var msg = h("div",{class:"status", text:t("renderErrorMsg")});
+      msg.style.marginTop = "8px";
+      fallback.appendChild(msg);
+      var backBtn = h("button",{class:"btn-outline", text:t("backToToday")});
+      backBtn.style.marginTop = "20px";
+      backBtn.addEventListener("click", function(){
+        state.view = "dashboard";
+        state.selectedDate = startOfDay(new Date());
+        render();
+      });
+      fallback.appendChild(backBtn);
+      root.appendChild(fallback);
+    }
+  }
+
+  window.addEventListener("error", function(ev){
+    console.error("Unhandled error", ev.error || ev.message);
+  });
+  window.addEventListener("unhandledrejection", function(ev){
+    console.error("Unhandled promise rejection", ev.reason);
+  });
+
+  function switchView(v){
+    state.view=v;
+    state.editingHabitId=null;
+    state.deleteConfirmingId=null;
+    state.habitsEditMode=false;
+    state.mainAddOpen=false;
+    if(v==="settings") state.settingsDraft = {language:state.settings.language, soundEffects:state.settings.soundEffects};
+    render();
+  }
+
+  function renderTopbar(){
+    var top = h("div",{class:"topbar"});
+    top.appendChild(h("div",{class:"brand", text:"Consistency"}));
+    var tabs = h("div",{class:"tabs"});
+    [["dashboard",t("tabToday")],["history",t("tabHistory")],["settings",t("tabSettings")]].forEach(function(pair){
+      tabs.appendChild(h("button",{
+        class:"tab"+(state.view===pair[0]?" active":""), text:pair[1],
+        onclick:function(){ switchView(pair[0]); }
+      }));
+    });
+    top.appendChild(tabs);
+    top.appendChild(h("button",{
+      class:"theme-toggle", text: state.config.theme==="dark" ? t("themeLight") : t("themeDark"),
+      onclick:function(){
+        state.config.theme = state.config.theme==="dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", state.config.theme);
+        persist(); render();
+      }
+    }));
+    return top;
+  }
+
+  /* ---------------- dashboard ---------------- */
+  function renderDashboard(){
+    var wrap = h("div",{});
+    var today = startOfDay(new Date());
+    var ds = dateStr(state.selectedDate);
+    var isToday = isSameDay(state.selectedDate, today);
+
+    /* day nav */
+    var nav = h("div",{class:"daynav"});
+    nav.appendChild(h("button",{class:"arrow", "aria-label":"Previous day", onclick:function(){
+      state.selectedDate = addDays(state.selectedDate,-1); render();
+    }}, [icon(ICONS.chevronLeft,14)]));
+    var dw = h("div",{class:"datewrap"});
+    dw.appendChild(h("div",{class:"date-label", text: formatDisplayDate(state.selectedDate, today)}));
+    if(!isToday){
+      dw.appendChild(h("button",{class:"jump-today", text:t("jumpToday"), onclick:function(){
+        state.selectedDate = startOfDay(new Date()); render();
+      }}));
+    } else {
+      dw.appendChild(h("div",{class:"date-sub", text:t("today")}));
+    }
+    nav.appendChild(dw);
+    nav.appendChild(h("button",{class:"arrow", "aria-label":"Next day", onclick:function(){
+      state.selectedDate = addDays(state.selectedDate,1); render();
+    }}, [icon(ICONS.chevronRight,14)]));
+    wrap.appendChild(nav);
+
+    if(!isToday) wrap.appendChild(h("div",{class:"viewing-pill", text: state.selectedDate<today ? t("viewingPast") : t("viewingFuture") }));
+
+    var greetingText = isToday ? timeGreeting() : formatDisplayDate(state.selectedDate, today);
+    wrap.appendChild(h("div",{class:"greeting", text: greetingText}));
+
+    var comp = computeCompletion(ds);
+    var progressRow = h("div",{class:"progress-row"});
+    progressRow.appendChild(renderRing(comp.pct));
+    var meta = h("div",{class:"progress-meta"});
+    meta.appendChild(h("div",{class:"count mono", id:"progress-count", text: t("completedOf",{completed:comp.completed, total:comp.total})}));
+    meta.appendChild(h("div",{class:"status", id:"progress-status", text: statusMessage(comp.total? comp.pct : 0)}));
+    progressRow.appendChild(meta);
+    wrap.appendChild(progressRow);
+
+    /* habits section header + manage toggle */
+    var labelRow = h("div",{class:"section-label-row"});
+    labelRow.appendChild(h("div",{class:"section-label", text:t("habitsLabel")}));
+    labelRow.appendChild(h("button",{class:"text-link", text: state.habitsEditMode ? t("doneManaging") : t("manage"), onclick:function(){
+      state.habitsEditMode = !state.habitsEditMode;
+      state.editingHabitId = null;
+      state.deleteConfirmingId = null;
+      render();
+    }}));
+    wrap.appendChild(labelRow);
+
+    var habitsWrap = h("div",{class:"habits"});
+    if(state.habitsEditMode){
+      renderManageRows(habitsWrap);
+    } else {
+      var habitsList = state.config.habits.filter(function(hb){return hb.enabled;});
+      if(habitsList.length===0){
+        habitsWrap.appendChild(h("div",{class:"empty-note", text:t("noHabitsEnabled")}));
+      } else {
+        habitsList.forEach(function(hb){
+          var day = getDay(ds);
+          var done = !!(day && day.habits[hb.id]);
+          var row = h("button",{class:"habit-row"+(done?" done":""), "data-habit-id":hb.id, onclick:function(ev){
+            toggleHabit(ds, hb.id, ev.currentTarget);
+          }});
+          row.appendChild(h("div",{class:"check"},[icon(ICONS.check,12)]));
+          row.appendChild(h("div",{class:"habit-name", text:hb.name}));
+          habitsWrap.appendChild(row);
+        });
+      }
+    }
+    wrap.appendChild(habitsWrap);
+
+    /* quick add — always one tap away, right under the list */
+    if(state.mainAddOpen){
+      var addRow = h("div",{class:"add-habit-row"});
+      var addInput = h("input",{placeholder:t("addHabitPlaceholder")});
+      addRow.appendChild(addInput);
+      addRow.appendChild(h("button",{class:"btn-outline", text:t("add"), onclick:function(){
+        commitAddHabit(addInput.value);
+      }}));
+      addInput.addEventListener("keydown", function(ev){
+        if(ev.key==="Enter"){ commitAddHabit(addInput.value); }
+        if(ev.key==="Escape"){ state.mainAddOpen=false; render(); }
+      });
+      wrap.appendChild(addRow);
+      setTimeout(function(){ addInput.focus(); }, 0);
+    } else {
+      wrap.appendChild(h("button",{class:"text-link", text:"+ "+t("addHabit"), onclick:function(){
+        state.mainAddOpen = true; render();
+      }}));
+    }
+
+    /* mood */
+    wrap.appendChild(h("div",{class:"section-label", text:t("moodLabel"), style:"margin-top:34px;"}));
+    var moodRow = h("div",{class:"mood-row"});
+    var dayForMood = getDay(ds);
+    MOODS.forEach(function(moodId){
+      moodRow.appendChild(h("button",{
+        class:"mood-btn"+(dayForMood && dayForMood.mood===moodId ? " selected":""),
+        text:t(MOOD_LABEL_KEYS[moodId]),
+        onclick:function(){
+          var day = ensureDay(ds);
+          day.mood = (day.mood===moodId) ? null : moodId;
+          persist(); render();
+        }
+      }));
+    });
+    wrap.appendChild(moodRow);
+
+    /* journal */
+    wrap.appendChild(h("div",{class:"section-label", text:t("journalLabel")}));
+    var jwrap = h("div",{class:"journal-wrap"});
+    var ta = h("textarea",{class:"journal", placeholder:t("journalPlaceholder")});
+    ta.value = (getDay(ds) && getDay(ds).journal) || "";
+    var jTimer=null;
+    ta.addEventListener("input", function(){
+      var val = ta.value;
+      clearTimeout(jTimer);
+      jTimer = setTimeout(function(){
+        var day = ensureDay(ds);
+        day.journal = val;
+        persist();
+        var flag = document.getElementById("save-flag");
+        if(flag){ flag.classList.add("show"); setTimeout(function(){ flag.classList.remove("show"); }, 1200); }
+      }, 450);
+    });
+    jwrap.appendChild(ta);
+    jwrap.appendChild(h("div",{class:"save-flag", id:"save-flag", text:t("saved")}));
+    wrap.appendChild(jwrap);
+
+    /* footer */
+    var footer = h("div",{class:"footer-row"});
+    footer.appendChild(h("div",{class:"insight", id:"insight-text", text: computeInsight()}));
+    if(state.resetConfirming){
+      footer.appendChild(h("button",{class:"reset-confirm", text:t("confirmReset"), onclick:function(){
+        delete state.days[ds]; state.resetConfirming=false; persist(); render(); showToast(t("dayReset"));
+      }}));
+    } else {
+      footer.appendChild(h("button",{class:"reset-link", text:t("resetDay"), onclick:function(){
+        state.resetConfirming=true; render();
+        setTimeout(function(){ state.resetConfirming=false; }, 3000);
+      }}));
+    }
+    wrap.appendChild(footer);
+
+    return wrap;
+  }
+
+  function renderManageRows(container){
+    state.config.habits.forEach(function(hb, idx){
+      var row = h("div",{class:"manage-row"});
+      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move up", disabled: idx===0, onclick:function(){
+        moveHabit(idx,-1);
+      }},[icon(ICONS.up,13)]));
+      row.appendChild(h("button",{class:"iconbtn", "aria-label":"Move down", disabled: idx===state.config.habits.length-1, onclick:function(){
+        moveHabit(idx,1);
+      }},[icon(ICONS.down,13)]));
+
+      if(state.editingHabitId===hb.id){
+        var input = h("input",{class:"rename"});
+        input.value = hb.name;
+        input.addEventListener("keydown", function(ev){
+          if(ev.key==="Enter"){ commitRename(hb.id, input.value); }
+          if(ev.key==="Escape"){ state.editingHabitId=null; render(); }
+        });
+        input.addEventListener("blur", function(){ commitRename(hb.id, input.value); });
+        row.appendChild(input);
+        setTimeout(function(){ input.focus(); input.select(); }, 0);
+      } else {
+        row.appendChild(h("div",{class:"name"+(hb.enabled?"":" disabled"), text:hb.name, onclick:function(){
+          state.editingHabitId = hb.id; render();
+        }}));
+      }
+
+      row.appendChild(h("div",{class:"switch"+(hb.enabled?" on":""), onclick:function(){
+        hb.enabled = !hb.enabled; persist(); render();
+      }},[h("div",{class:"dot"})]));
+
+      if(state.deleteConfirmingId===hb.id){
+        row.appendChild(h("button",{class:"iconbtn", text:"✕", "aria-label":t("deleteConfirm"), onclick:function(){
+          state.config.habits = state.config.habits.filter(function(x){return x.id!==hb.id;});
+          state.deleteConfirmingId=null; persist(); render(); showToast(t("habitDeleted"));
+        }}));
+      } else {
+        row.appendChild(h("button",{class:"iconbtn", "aria-label":"Delete", onclick:function(){
+          state.deleteConfirmingId = hb.id; render();
+          setTimeout(function(){ if(state.deleteConfirmingId===hb.id){ state.deleteConfirmingId=null; render(); } }, 3000);
+        }},[icon(ICONS.trash,13)]));
+      }
+      container.appendChild(row);
+    });
+  }
+
+  function commitAddHabit(value){
+    var val = (value||"").trim();
+    if(!val) return;
+    var isDuplicate = state.config.habits.some(function(hb){ return hb.name.toLowerCase() === val.toLowerCase(); });
+    if(isDuplicate){
+      showToast(t("habitAlreadyExists"));
+      return;
+    }
+    var id = "h"+Date.now();
+    state.config.habits.push({id:id, name:val, enabled:true});
+    state.mainAddOpen = false;
+    persist(); render();
+    playAddSound();
+    showToast(t("habitAdded"));
+  }
+
+  function timeGreeting(){
+    var hr = new Date().getHours();
+    if(hr < 12) return t("greetMorning");
+    if(hr < 18) return t("greetAfternoon");
+    return t("greetEvening");
+  }
+
+  function toggleHabit(ds, habitId, rowEl){
+    var day = ensureDay(ds);
+    var willBeDone = !day.habits[habitId];
+    day.habits[habitId] = willBeDone;
+    persist();
+    if(willBeDone) playCheckSound();
+
+    // Patch the existing DOM in place so CSS transitions actually animate,
+    // instead of tearing down and rebuilding the whole dashboard.
+    if(rowEl){
+      rowEl.classList.toggle("done", willBeDone);
+      if(willBeDone){
+        rowEl.classList.remove("pop");
+        void rowEl.offsetWidth;
+        rowEl.classList.add("pop");
+        rowEl.addEventListener("animationend", function handler(){
+          rowEl.classList.remove("pop");
+          rowEl.removeEventListener("animationend", handler);
+        });
+      }
+    }
+
+    var comp = computeCompletion(ds);
+    var fg = document.getElementById("ring-fg");
+    if(fg){
+      var c = parseFloat(fg.getAttribute("data-circumference"));
+      fg.setAttribute("stroke-dashoffset", (c - (c*comp.pct/100)).toFixed(2));
+    }
+    var pctEl = document.getElementById("ring-pct");
+    if(pctEl) pctEl.textContent = comp.pct+"%";
+    var countEl = document.getElementById("progress-count");
+    if(countEl) countEl.textContent = t("completedOf",{completed:comp.completed, total:comp.total});
+    var statusEl = document.getElementById("progress-status");
+    if(statusEl) statusEl.textContent = statusMessage(comp.total ? comp.pct : 0);
+    var insightEl = document.getElementById("insight-text");
+    if(insightEl) insightEl.textContent = computeInsight();
+  }
+
+  function renderRing(pct){
+    var size=88, stroke=6, r=(size-stroke)/2, c=2*Math.PI*r;
+    var wrap = h("div",{class:"ring-wrap"});
+    var svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("width",size); svg.setAttribute("height",size); svg.setAttribute("viewBox","0 0 "+size+" "+size);
+    var bg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    bg.setAttribute("cx",size/2); bg.setAttribute("cy",size/2); bg.setAttribute("r",r);
+    bg.setAttribute("fill","none"); bg.setAttribute("stroke","var(--border)"); bg.setAttribute("stroke-width",stroke);
+    svg.appendChild(bg);
+    var fg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    fg.setAttribute("cx",size/2); fg.setAttribute("cy",size/2); fg.setAttribute("r",r);
+    fg.setAttribute("fill","none"); fg.setAttribute("stroke","var(--text)"); fg.setAttribute("stroke-width",stroke);
+    fg.setAttribute("stroke-linecap","round");
+    fg.setAttribute("stroke-dasharray", c.toFixed(2));
+    fg.setAttribute("stroke-dashoffset", (c - (c*pct/100)).toFixed(2));
+    fg.setAttribute("data-circumference", c.toFixed(2));
+    fg.id = "ring-fg";
+    fg.style.transition = "stroke-dashoffset .5s ease";
+    svg.appendChild(fg);
+    wrap.appendChild(svg);
+    wrap.appendChild(h("div",{class:"ring-pct mono", id:"ring-pct", text:pct+"%"}));
+    return wrap;
+  }
+
+  /* ---------------- history ---------------- */
+  function renderHistory(){
+    var wrap = h("div",{});
+    var stats = bestStreakAndStats();
+    var cs = currentStreak();
+    var grid = h("div",{class:"stats-grid"});
+    [
+      [cs,t("statCurrentStreak")],
+      [stats.best,t("statBestStreak")],
+      [stats.avg+"%",t("statAvgCompletion")],
+      [stats.at100,t("statPerfectDays")],
+      [stats.total,t("statDaysTracked")]
+    ].forEach(function(s){
+      grid.appendChild(h("div",{class:"stat"},[
+        h("div",{class:"num mono", text:s[0]}),
+        h("div",{class:"lbl", text:s[1]})
+      ]));
+    });
+    wrap.appendChild(grid);
+
+    var lang = state.settings.language;
+    var monthNames = MONTH_NAMES_I18N[lang] || MONTH_NAMES_I18N.en;
+    var mn = h("div",{class:"month-nav"});
+    mn.appendChild(h("button",{class:"arrow", onclick:function(){
+      state.historyMonth = new Date(state.historyMonth.getFullYear(), state.historyMonth.getMonth()-1, 1); render();
+    }},[icon(ICONS.chevronLeft,13)]));
+    mn.appendChild(h("div",{class:"month-title", text: monthNames[state.historyMonth.getMonth()]+" "+state.historyMonth.getFullYear()}));
+    mn.appendChild(h("button",{class:"arrow", onclick:function(){
+      state.historyMonth = new Date(state.historyMonth.getFullYear(), state.historyMonth.getMonth()+1, 1); render();
+    }},[icon(ICONS.chevronRight,13)]));
+    wrap.appendChild(mn);
+
+    var wr = h("div",{class:"weekday-row"});
+    (WEEKDAY_SHORT_I18N[lang] || WEEKDAY_SHORT_I18N.en).forEach(function(l){ wr.appendChild(h("span",{text:l})); });
+    wrap.appendChild(wr);
+
+    var cg = h("div",{class:"cal-grid"});
+    var firstOfMonth = state.historyMonth;
+    var startOffset = firstOfMonth.getDay();
+    var daysInMonth = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth()+1, 0).getDate();
+    var today = startOfDay(new Date());
+    for(var i=0;i<startOffset;i++) cg.appendChild(h("div",{class:"cal-cell blank"}));
+    for(var day=1; day<=daysInMonth; day++){
+      var d = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth(), day);
+      var dds = dateStr(d);
+      var hasData = !!state.days[dds];
+      var pct = hasData ? computeCompletion(dds).pct : 0;
+      var cls = "cal-cell clickable";
+      if(isSameDay(d, today)) cls += " today";
+      if(hasData && pct===100) cls += " full";
+      var cell = h("button",{class:cls, text:String(day), onclick:(function(dCopy){ return function(){
+        state.selectedDate = dCopy; state.view="dashboard"; render();
+      };})(d)});
+      var alpha = 0;
+      if(hasData){
+        if(pct>=100) alpha=0.92;
+        else if(pct>=80) alpha=0.62;
+        else if(pct>=50) alpha=0.36;
+        else if(pct>0) alpha=0.16;
+        else alpha=0.05;
+      }
+      if(alpha>0) cell.style.background = "rgba(var(--ink),"+alpha+")";
+      if(alpha>0.3) cell.style.color = "var(--bg)";
+      cg.appendChild(cell);
+    }
+    wrap.appendChild(cg);
+    return wrap;
+  }
+
+  /* ---------------- settings (app preferences only) ---------------- */
+  function renderSettings(){
+    if(!state.settingsDraft){
+      state.settingsDraft = {language:state.settings.language, soundEffects:state.settings.soundEffects};
+    }
+    var draft = state.settingsDraft;
+    var wrap = h("div",{});
+
+    wrap.appendChild(h("div",{class:"section-label", text:t("preferences")}));
+    var block = h("div",{class:"pref-block"});
+
+    var langRowWrap = h("div",{});
+    langRowWrap.appendChild(h("div",{class:"pref-label", text:t("language")}));
+    var langRow = h("div",{class:"lang-row"});
+    LANGUAGES.forEach(function(lang){
+      langRow.appendChild(h("button",{
+        class:"lang-btn"+(draft.language===lang.code ? " selected":""),
+        text:lang.name,
+        onclick:function(){ state.settingsDraft.language = lang.code; render(); }
+      }));
+    });
+    langRowWrap.appendChild(langRow);
+    block.appendChild(langRowWrap);
+
+    var soundRow = h("div",{class:"pref-row", style:"margin-top:22px; border-top:1px solid var(--border); padding-top:18px; border-bottom:none;"});
+    var soundLabelWrap = h("div",{});
+    soundLabelWrap.appendChild(h("div",{class:"pref-label", text:t("soundEffects")}));
+    soundLabelWrap.appendChild(h("div",{class:"pref-hint", text:t("soundEffectsHint")}));
+    soundRow.appendChild(soundLabelWrap);
+    soundRow.appendChild(h("div",{class:"switch"+(draft.soundEffects?" on":""), onclick:function(){
+      state.settingsDraft.soundEffects = !state.settingsDraft.soundEffects; render();
+    }},[h("div",{class:"dot"})]));
+    block.appendChild(soundRow);
+
+    wrap.appendChild(block);
+
+    var isDirty = draft.language !== state.settings.language || draft.soundEffects !== state.settings.soundEffects;
+    var saveRow = h("div",{class:"save-row"});
+    saveRow.appendChild(h("button",{class:"btn-primary", text:t("save"), disabled: !isDirty, onclick:function(){
+      state.settings.language = draft.language;
+      state.settings.soundEffects = draft.soundEffects;
+      persist();
+      playSaveSound();
+      render();
+      var flag = document.getElementById("settings-saved-flag");
+      if(flag){ flag.classList.add("show"); setTimeout(function(){ if(flag) flag.classList.remove("show"); }, 1800); }
+    }}));
+    saveRow.appendChild(h("div",{class:"settings-saved-flag", id:"settings-saved-flag", text:t("settingsSaved")}));
+    wrap.appendChild(saveRow);
+
+    wrap.appendChild(h("div",{class:"section-label", text:t("dataLabel"), style:"margin-top:40px;"}));
+    var dataActions = h("div",{class:"data-actions"});
+    dataActions.appendChild(h("button",{class:"btn-outline", text:t("exportJSON"), onclick:exportData}));
+    var fileInput = h("input",{type:"file", accept:"application/json"});
+    fileInput.addEventListener("change", function(ev){
+      var file = ev.target.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(){
+        try{
+          var parsed = JSON.parse(reader.result);
+          var validConfig = parsed && parsed.config && Array.isArray(parsed.config.habits) &&
+            parsed.config.habits.every(function(hb){ return hb && typeof hb.id==="string" && typeof hb.name==="string"; });
+          var validDays = parsed && parsed.days && typeof parsed.days==="object" && !Array.isArray(parsed.days);
+          if(validConfig && validDays){
+            state.config = parsed.config;
+            if(!state.config.theme) state.config.theme = "dark";
+            state.days = parsed.days;
+            state.settings = sanitizeSettings(parsed.settings);
+            state.settingsDraft = {language:state.settings.language, soundEffects:state.settings.soundEffects};
+            migrateMoodIds();
+            document.documentElement.setAttribute("data-theme", state.config.theme);
+            persist(); render();
+            showToast(t("importComplete"));
+          } else {
+            showToast(t("fileFormatNotRecognized"));
+          }
+        }catch(e){
+          console.warn("Import failed — file was not valid JSON.", e);
+          showToast(t("couldntReadFile"));
+        }
+      };
+      reader.onerror = function(){ showToast(t("couldntReadFile")); };
+      reader.readAsText(file);
+      fileInput.value = "";
+    });
+    dataActions.appendChild(h("button",{class:"btn-outline", text:t("importJSON"), onclick:function(){ fileInput.click(); }}));
+    dataActions.appendChild(fileInput);
+    wrap.appendChild(dataActions);
+
+    return wrap;
+  }
+
+  function moveHabit(idx, dir){
+    var arr = state.config.habits;
+    var newIdx = idx+dir;
+    if(newIdx<0 || newIdx>=arr.length) return;
+    var tmp = arr[idx]; arr[idx]=arr[newIdx]; arr[newIdx]=tmp;
+    persist(); render();
+  }
+  function commitRename(id, value){
+    var v = value.trim();
+    if(v){
+      var hb = state.config.habits.filter(function(x){return x.id===id;})[0];
+      if(hb) hb.name = v;
+    }
+    state.editingHabitId = null;
+    persist(); render();
+  }
+  function exportData(){
+    var payload = JSON.stringify({config:state.config, days:state.days, settings:state.settings}, null, 2);
+    var blob = new Blob([payload], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "consistency-backup-"+dateStr(new Date())+".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(t("exported"));
+  }
+
+  
+  /* ---------------- init ---------------- */
+  loadAndInit();
+})();
+
+</script>
+</body>
+</html>
